@@ -109,6 +109,7 @@ async function getCameras() {
     cameraSelect.value = savedCamera;
   }
 }
+
 getCameras();
 // tilføjet
 cameraSelect.addEventListener("change", saveConfig);
