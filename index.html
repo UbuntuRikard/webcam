@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Index.html -->
+<!--
+This file is part of Indkøbs App - Denne app er kun på dansk her lige nu.
+Copyright (C) 2025 Rikard Svenningsen
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Webcam Streamer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="overlay">
+    <div id="datetime"></div>
+    <div id="ipaddress"></div>
+    <div id="battery"></div>
+  </div>
+
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+  <div id="status"></div>
+
+<div id="connection-config">
+  <div class="control-row">
+    <input id="serverIp" placeholder="Server IP" />
+    <input id="serverPort" placeholder="Port" value="8181" />
+    <button id="saveConfigBtn">Gem</button>
+  </div>
+  <div class="control-row">
+    <select id="cameraSelect"></select>
+    <select id="resolutionSelect">
+      <option value="low">320x240</option>
+      <option value="medium">640x480</option>
+      <option value="high">1280x720</option>
+    </select>
+    <select id="fpsSelect">
+      <option value="5">5 FPS</option>
+      <option value="10">10 FPS</option>
+      <option value="15">15 FPS</option>
+    </select>
+    <label>
+      <input type="checkbox" id="forcePermissionCheckbox" />
+      Tving tilladelse
+    </label>
+  </div>
+  <div class="control-row">
+    <button id="startBtn">Start</button>
+    <button id="stopBtn">Stop</button>
+    <button id="screenToggleBtn">Skift visning</button>
+  </div>
+</div>
+
+  <script src="webcam.js"></script>
+</body>
+</html>

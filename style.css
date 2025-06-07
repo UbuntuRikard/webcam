@@ -1,0 +1,113 @@
+/*
+ * style.css
+ */
+body {
+  margin: 0;
+  background: black;
+  color: white;
+  font-family: sans-serif;
+}
+
+video {
+  width: 100%;
+  height: auto;
+  background: black;
+}
+
+#canvas {
+  display: none;
+}
+
+#overlay {
+  position: absolute;
+  width: 100%;
+  pointer-events: none;
+  font-size: 14px;
+}
+
+#datetime {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+}
+
+#battery {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+#ipaddress {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#status {
+  position: absolute;
+  top: 40%;
+  width: 100%;
+  text-align: center;
+  color: red;
+  font-weight: bold;
+}
+
+#controls {
+  position: fixed;
+  bottom: 10px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 10px;
+}
+
+#connection-config {
+  position: fixed;
+  bottom: 10px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 5px;
+  font-size: 13px;
+}
+
+input, select, button {
+  padding: 3px 6px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+@media screen and (orientation: portrait) {
+  #controls,
+  #connection-config {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+#video, #canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+@media screen and (orientation: landscape) {
+  #controls,
+  #connection-config {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
