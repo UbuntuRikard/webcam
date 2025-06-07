@@ -127,42 +127,30 @@ function getJPEGQuality() {
 }
 */
 async function startCamera() {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+  }
+
+  const resolution = getResolutionSettings();
   try {
-    // Stop eksisterende stream, hvis der er en
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-      stream = null;
-    }
-
-    // Først anmod om generisk kamera for at trigge prompt
-    await navigator.mediaDevices.getUserMedia({ video: true });
-
-    // Så anmod om det specifikke kamera med valgte opløsning
-    const resolution = getResolutionSettings();
-    const constraints = {
+    stream = await navigator.mediaDevices.getUserMedia({
       video: {
         ...resolution,
         deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined
       },
       audio: false
-    };
-
-    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    });
 
     video.srcObject = stream;
+    video.style.display = "block";    // Vis live video
+    canvas.style.display = "none";    // Skjul canvas (der bruges til streaming senere)
     await video.play();
 
-    const settings = stream.getVideoTracks()[0].getSettings();
-    canvas.width = settings.width;
-    canvas.height = settings.height;
+    statusText.textContent = "✅ Kamera startet, klar til visning";
 
-    video.style.display = "none";
-    canvas.style.display = "block";
-
-    startSendingFrames();
-  } catch (err) {
-    console.error("🚨 Kamera-fejl:", err);
-    alert("Fejl ved start af kamera: " + err.message);
+  } catch (error) {
+    alert("Fejl ved start af kamera: " + error.message);
+    statusText.textContent = "❌ Kamera kunne ikke startes";
   }
 }
 
