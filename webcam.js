@@ -127,30 +127,43 @@ function getJPEGQuality() {
 }
 */
 async function startCamera() {
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
+  try {
+    // Stop eksisterende stream, hvis der er en
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+
+    // Først anmod om generisk kamera for at trigge prompt
+    await navigator.mediaDevices.getUserMedia({ video: true });
+
+    // Så anmod om det specifikke kamera med valgte opløsning
+    const resolution = getResolutionSettings();
+    const constraints = {
+      video: {
+        ...resolution,
+        deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined
+      },
+      audio: false
+    };
+
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+    video.srcObject = stream;
+    await video.play();
+
+    const settings = stream.getVideoTracks()[0].getSettings();
+    canvas.width = settings.width;
+    canvas.height = settings.height;
+
+    video.style.display = "none";
+    canvas.style.display = "block";
+
+    startSendingFrames();
+  } catch (err) {
+    console.error("🚨 Kamera-fejl:", err);
+    alert("Fejl ved start af kamera: " + err.message);
   }
-
-  const resolution = getResolutionSettings();
-  stream = await navigator.mediaDevices.getUserMedia({
-    video: {
-      ...resolution,
-      deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined
-    },
-    audio: false
-  });
-
-  video.srcObject = stream;
-  video.play();
-
-  const settings = stream.getVideoTracks()[0].getSettings();
-  canvas.width = settings.width;
-  canvas.height = settings.height;
-
-  video.style.display = "none";
-  canvas.style.display = "block";
-
-  startSendingFrames();
 }
 
 function stopCamera() {
