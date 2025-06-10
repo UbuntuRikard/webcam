@@ -34,7 +34,7 @@ To get this project up and running, follow these steps:
 
 1.  **Clone the Repository (or Download)**:
     ```bash
-    git clone [https://github.com/YOUR_USERNAME/webcam.git](https://github.com/YOUR_USERNAME/webcam.git)
+    git clone [https://github.com/UbuntuRikard/webcam.git](https://github.com/UbuntuRikard/webcam.git)
     cd webcam
     ```
     *(Replace `YOUR_USERNAME` with your actual GitHub username)*
@@ -48,7 +48,7 @@ To get this project up and running, follow these steps:
 
 ### Usage
 
-1.  **Access the PWA**: Open your browser and navigate to the hosted URL (e.g., `https://yourusername.github.io/webcam/`).
+1.  **Access the PWA**: Open your browser and navigate to the hosted URL (e.g., `https://UbuntuRikard.github.io/webcam/`).
 2.  **Grant Camera Permission**: The browser will prompt you to grant access to your camera. Allow this permission.
 3.  **Configure Connection**:
     * Enter the **IP Address** of your WebSocket server.
@@ -104,7 +104,7 @@ This section documents significant changes and new features across different ver
 
 ## 🤝 Credits
 
-* **Design**: [Your Name/Handle Here]
+* **Design**: Rikard Svenningsen
 * **Programming**: Gemini (Large Language Model by Google)
 
 ---
