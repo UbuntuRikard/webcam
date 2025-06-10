@@ -1,6 +1,3 @@
-/*
- * style.css
- */
 body {
   margin: 0;
   background: black;
@@ -8,10 +5,11 @@ body {
   font-family: sans-serif;
 }
 
-video {
-  width: 100%;
+video, #canvas {
+  max-width: 100%;
   height: auto;
   background: black;
+  margin-top: 30px; /* Pushes the video/canvas down from the top */
 }
 
 #canvas {
@@ -22,26 +20,28 @@ video {
   position: absolute;
   width: 100%;
   pointer-events: none;
-  font-size: 14px;
-}
-
-#datetime {
-  position: absolute;
+  font-size: 10px; /* Text size for all overlay elements */
   top: 5px;
-  left: 5px;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+  box-sizing: border-box;
 }
 
+#ipaddress,
+#appVersion, /* Apply styles to new version element */
 #battery {
-  position: absolute;
-  top: 5px;
-  right: 5px;
+  position: static;
+  transform: none;
+  flex-shrink: 0;
+  white-space: nowrap; /* Ensures text stays on one line */
+  overflow: hidden; /* Hides overflowing text */
+  text-overflow: ellipsis; /* Adds ellipsis for truncated text */
 }
 
-#ipaddress {
-  position: absolute;
-  top: 5px;
-  left: 50%;
-  transform: translateX(-50%);
+#appVersion {
+  flex-grow: 1; /* Allows it to take available space */
+  text-align: center; /* Centers the version text */
 }
 
 #status {
@@ -55,59 +55,78 @@ video {
 
 #controls {
   position: fixed;
-  bottom: 10px;
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  background: rgba(0, 0, 0, 0.5);
-  padding: 10px;
-}
-
-#connection-config {
-  position: fixed;
-  bottom: 10px;
+  bottom: 0;
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.5);
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.7);
   padding: 5px;
-  font-size: 13px;
+  box-sizing: border-box;
+  gap: 5px;
 }
 
-input, select, button {
-  padding: 3px 6px;
-  font-size: 13px;
-  line-height: 1.2;
-}
-
-@media screen and (orientation: portrait) {
-  #controls,
-  #connection-config {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-#video, #canvas {
-  max-width: 100%;
-  height: auto;
-}
-
-@media screen and (orientation: landscape) {
-  #controls,
-  #connection-config {
-    flex-direction: row;
-    align-items: center;
-  }
-}
-
-.control-row {
+#connection-config,
+#controls-container {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 5px;
-  margin-bottom: 5px;
 }
 
+input.compact-input,
+select.compact-select,
+button {
+  padding: 3px 6px;
+  font-size: 10px;
+  box-sizing: border-box;
+  height: 22px;
+  min-width: unset;
+}
+
+input.compact-input {
+  width: 90px;
+}
+
+input.compact-input[id="serverPort"] {
+  width: 50px;
+}
+
+.icon-button {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.icon-button i {
+  font-size: 14px;
+}
+
+.icon-text-button {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.icon-text-button i {
+  font-size: 12px;
+}
+
+@media screen and (min-width: 600px) {
+  #controls {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  #connection-config {
+    order: 1;
+  }
+
+  #controls-container {
+    order: 2;
+  }
+}
