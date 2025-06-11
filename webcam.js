@@ -158,7 +158,189 @@ function getResolutionSettings() {
 function getJPEGQuality() {
     return 0.92;
 }
+// forsøg 1 start
+// --- Start AF Forsøg 1: startCamera funktion ---
+async function startCamera() {
+    console.log("Attempting to start camera...");
+    statusText.textContent = "🟡 Starter kamera...";
 
+    if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+    }
+
+    // Vi henter opløsningsindstillingerne fra dropdown (disse er med 'ideal' fra getResolutionSettings)
+    const resolutionConstraintsFromDropdown = getResolutionSettings(); 
+    const selectedDeviceId = cameraSelect.value;
+    const selectedDeviceLabel = cameraSelect.options[cameraSelect.selectedIndex]?.textContent.toLowerCase();
+
+    let videoConstraints = {
+        audio: false, // Ingen lyd
+        video: {}     // Tomt videoobjekt til at starte med
+    };
+
+    if (selectedDeviceLabel.includes('front')) {
+        // For frontkameraet: brug 'user' facingMode og den valgte opløsning
+        videoConstraints.video.facingMode = 'user';
+        Object.assign(videoConstraints.video, resolutionConstraintsFromDropdown);
+    } else if (selectedDeviceLabel.includes('back') || selectedDeviceLabel.includes('miljø') || selectedDeviceLabel.includes('environment')) {
+        // For bagkameraet:
+        // 1. Prioriter 'environment' facingMode
+        videoConstraints.video.facingMode = 'environment';
+        // 2. Hårdkod en SPECIFIK, LAV og ALMINDELIG exact opløsning
+        //    Dette er for at teste, om en "exact" match med en kendt lav opløsning virker
+        Object.assign(videoConstraints.video, { width: { exact: 640 }, height: { exact: 480 } });
+        console.warn("Using specific EXACT 640x480 for back camera to test compatibility.");
+    } else if (selectedDeviceId) {
+        // Fallback til deviceId, hvis facingMode ikke er tydelig ud fra labelen
+        videoConstraints.video.deviceId = { exact: selectedDeviceId }; 
+        Object.assign(videoConstraints.video, resolutionConstraintsFromDropdown);
+    } else {
+        // Hvis intet specifikt kamera er valgt, eller ingen labels matcher - lad browseren vælge
+        videoConstraints.video = true; // bare anmod om en videostrøm uden specifikke krav
+    }
+    
+    // Log de endelige constraints, der sendes til getUserMedia
+    console.log("Using video constraints:", videoConstraints.video);
+
+    try {
+        stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+
+        console.log("Camera stream obtained successfully.");
+        statusText.textContent = "🟢 Kamera startet, forbinder...";
+
+        video.srcObject = stream;
+        video.play();
+
+        const settings = stream.getVideoTracks()[0].getSettings();
+        canvas.width = settings.width;
+        canvas.height = settings.height;
+        // Log den faktiske opløsning, der blev brugt
+        console.log(`Actual camera resolution: ${settings.width}x${settings.height}`);
+
+
+        video.style.display = "none";
+        canvas.style.display = "block";
+
+        startSendingFrames();
+
+    } catch (error) {
+        console.error("Error starting camera:", error);
+        let userMessage = "Kunne ikke starte videokilde.";
+
+        if (error.name === 'NotReadableError') {
+            userMessage = "Kameraet er sandsynligvis i brug af en anden app, eller der er en midlertidig hardwarefejl. Prøv at **genstarte telefonen, lukke alle andre apps** (især dem der bruger kameraet), og sikre at intet andet bruger kameraet. (Fejlkode: NotReadableError)";
+        } else if (error.name === 'NotAllowedError') {
+            userMessage = "Adgang til kameraet blev nægtet. Du skal give adgang i telefonens indstillinger (Indstillinger -> Apps -> Chrome/Webcam App -> Tilladelser -> Kamera). (Fejlkode: NotAllowedError)";
+        } else if (error.name === 'NotFoundError') {
+            userMessage = "Ingen passende kameraer fundet på denne enhed. Sørg for, at din telefon har et fungerende kamera. (Fejlkode: NotFoundError)";
+        } else if (error.name === 'OverconstrainedError') {
+            userMessage = `De specificerede videokrav (opløsning, framerate eller kamera-valg) kunne ikke opfyldes af dit kamera. Prøv at vælge en **lavere opløsning, eller lad opløsningen være standard for bagkameraet** (ved at fjerne opløsningsvalget for bagkameraet i appen). Fejldetaljer: ${error.message || 'Ukendt'}. (Fejlkode: OverconstrainedError, Constraint: ${error.constraint || 'Ukendt'})`;
+            console.warn("OverconstrainedError details:", error.constraint, error.message);
+        } else if (error.name === 'SecurityError') {
+            userMessage = "En sikkerhedsfejl forhindrede adgang til kameraet. Sørg for at tilgå siden via **HTTPS** (f.eks. din GitHub Pages URL). (Fejlkode: SecurityError)";
+        } else if (error.name === 'AbortError') {
+            userMessage = "Adgangen til kameraet blev afbrudt. Prøv at starte igen. (Fejlkode: AbortError)";
+        } else {
+            userMessage = "En ukendt fejl opstod ved start af kameraet. (Fejlkode: " + error.name + ")";
+        }
+
+        alert("FEJL ved start af kamera: " + userMessage);
+        statusText.textContent = "🔴 Kamerastart fejlede";
+    }
+}
+// --- Slut AF Forsøg 1: startCamera funktion ---
+// forsøg 1 slut
+
+/* forsøg 2 start
+// --- Start AF Forsøg 2: startCamera funktion ---
+async function startCamera() {
+    console.log("Attempting to start camera...");
+    statusText.textContent = "🟡 Starter kamera...";
+
+    if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+    }
+
+    // Henter opløsningsindstillingerne fra dropdown (disse er med 'ideal' fra getResolutionSettings)
+    const resolutionConstraintsFromDropdown = getResolutionSettings(); 
+    const selectedDeviceId = cameraSelect.value;
+    // const selectedDeviceLabel = cameraSelect.options[cameraSelect.selectedIndex]?.textContent.toLowerCase(); // <-- Ikke nødvendig for dette forsøg
+
+    let videoConstraints = {
+        audio: false,
+        video: {}
+    };
+
+    // --- VIGTIG ÆNDRING TIL BAGKAMERAET ---
+    // FJERN facingMode og brug KUN deviceId for ALLE kameravalg
+    if (selectedDeviceId) { // Vi bruger deviceId for ALT nu, inkl. front/bag
+        videoConstraints.video.deviceId = { exact: selectedDeviceId }; 
+        // Tilføj opløsning fra dropdown (som bruger 'ideal')
+        Object.assign(videoConstraints.video, resolutionConstraintsFromDropdown); 
+        // Hvis du vil kombinere med HARDKODET EXACT 640x480 som i Forsøg 1,
+        // ville du erstatte linjen ovenfor med:
+        // Object.assign(videoConstraints.video, { width: { exact: 640 }, height: { exact: 480 } });
+    } else {
+        // Fallback hvis ingen deviceId er valgt
+        videoConstraints.video = true;
+    }
+    // --- SLUT VIGTIG ÆNDRING ---
+    
+    // Log de endelige constraints, der sendes til getUserMedia
+    console.log("Using video constraints:", videoConstraints.video);
+
+    try {
+        stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
+
+        console.log("Camera stream obtained successfully.");
+        statusText.textContent = "🟢 Kamera startet, forbinder...";
+
+        video.srcObject = stream;
+        video.play();
+
+        const settings = stream.getVideoTracks()[0].getSettings();
+        canvas.width = settings.width;
+        canvas.height = settings.height;
+        // Log den faktiske opløsning, der blev brugt
+        console.log(`Actual camera resolution: ${settings.width}x${settings.height}`);
+
+
+        video.style.display = "none";
+        canvas.style.display = "block";
+
+        startSendingFrames();
+
+    } catch (error) {
+        console.error("Error starting camera:", error);
+        let userMessage = "Kunne ikke starte videokilde.";
+
+        if (error.name === 'NotReadableError') {
+            userMessage = "Kameraet er sandsynligvis i brug af en anden app, eller der er en midlertidig hardwarefejl. Prøv at **genstarte telefonen, lukke alle andre apps** (især dem der bruger kameraet), og sikre at intet andet bruger kameraet. (Fejlkode: NotReadableError)";
+        } else if (error.name === 'NotAllowedError') {
+            userMessage = "Adgang til kameraet blev nægtet. Du skal give adgang i telefonens indstillinger (Indstillinger -> Apps -> Chrome/Webcam App -> Tilladelser -> Kamera). (Fejlkode: NotAllowedError)";
+        } else if (error.name === 'NotFoundError') {
+            userMessage = "Ingen passende kameraer fundet på denne enhed. Sørg for, at din telefon har et fungerende kamera. (Fejlkode: NotFoundError)";
+        } else if (error.name === 'OverconstrainedError') {
+            userMessage = `De specificerede videokrav (opløsning, framerate eller kamera-valg) kunne ikke opfyldes af dit kamera. Prøv at vælge en **lavere opløsning, eller lad opløsningen være standard for bagkameraet** (ved at fjerne opløsningsvalget for bagkameraet i appen). Fejldetaljer: ${error.message || 'Ukendt'}. (Fejlkode: OverconstrainedError, Constraint: ${error.constraint || 'Ukendt'})`;
+            console.warn("OverconstrainedError details:", error.constraint, error.message);
+        } else if (error.name === 'SecurityError') {
+            userMessage = "En sikkerhedsfejl forhindrede adgang til kameraet. Sørg for at tilgå siden via **HTTPS** (f.eks. din GitHub Pages URL). (Fejlkode: SecurityError)";
+        } else if (error.name === 'AbortError') {
+            userMessage = "Adgangen til kameraet blev afbrudt. Prøv at starte igen. (Fejlkode: AbortError)";
+        } else {
+            userMessage = "En ukendt fejl opstod ved start af kameraet. (Fejlkode: " + error.name + ")";
+        }
+
+        alert("FEJL ved start af kamera: " + userMessage);
+        statusText.textContent = "🔴 Kamerastart fejlede";
+    }
+}
+// --- Slut AF Forsøg 2: startCamera funktion ---
+*/
+// forsøg 2 slut
+/*
 async function startCamera() {
     console.log("Attempting to start camera...");
     statusText.textContent = "🟡 Starter kamera..."; // Update status text
@@ -234,7 +416,7 @@ async function startCamera() {
         statusText.textContent = "🔴 Kamerastart fejlede";
     }
 }
-
+*/
 function stopCamera() {
     if (stream) {
         stream.getTracks().forEach(t => t.stop());
