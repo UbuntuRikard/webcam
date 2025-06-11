@@ -138,32 +138,71 @@ function getJPEGQuality() {
 }
 
 async function startCamera() {
+    console.log("Attempting to start camera...");
+    statusText.textContent = "🟡 Starter kamera..."; // Update status text
+
     if (stream) {
         stream.getTracks().forEach(t => t.stop());
+        stream = null; // Clear previous stream if it exists
     }
 
     const resolution = getResolutionSettings();
-    stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-            ...resolution,
-            deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined
-        },
-        audio: false
-    });
+    const videoConstraints = {
+        ...resolution,
+        deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined
+    };
 
-    video.srcObject = stream;
-    video.play();
+    try {
+        // This is where navigator.mediaDevices.getUserMedia() is called
+        // The error "NotReadableError: Could not start video source" originates here
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: videoConstraints,
+            audio: false
+        });
 
-    const settings = stream.getVideoTracks()[0].getSettings();
-    canvas.width = settings.width;
-    canvas.height = settings.height;
+        console.log("Camera stream obtained successfully.");
+        statusText.textContent = "🟢 Kamera startet, forbinder..."; // Update status
 
-    video.style.display = "none";
-    canvas.style.display = "block";
+        video.srcObject = stream;
+        video.play();
 
-    startSendingFrames();
+        const settings = stream.getVideoTracks()[0].getSettings();
+        canvas.width = settings.width;
+        canvas.height = settings.height;
+
+        video.style.display = "none";
+        canvas.style.display = "block";
+
+        startSendingFrames(); // This starts the WebSocket connection and frame sending
+
+    } catch (error) {
+        console.error("Error starting camera:", error);
+        let userMessage = "Kunne ikke starte videokilde.";
+
+        // --- Detailed error handling based on error.name ---
+        if (error.name === 'NotReadableError') {
+            userMessage = "Kameraet er sandsynligvis i brug af en anden app, eller der er en midlertidig hardwarefejl. Prøv at **genstarte telefonen, lukke alle andre apps** (især dem der bruger kameraet), og sikre at intet andet bruger kameraet.";
+        } else if (error.name === 'NotAllowedError') {
+            // This case is unlikely if you've manually set permissions, but included for completeness.
+            userMessage = "Adgang til kameraet blev nægtet. Du skal give adgang i telefonens indstillinger (Indstillinger -> Apps -> Chrome/Webcam App -> Tilladelser -> Kamera).";
+        } else if (error.name === 'NotFoundError') {
+            userMessage = "Ingen passende kameraer fundet på denne enhed. Sørg for, at din telefon har et fungerende kamera.";
+        } else if (error.name === 'OverconstrainedError') {
+            userMessage = "De specificerede videokrav (opløsning, framerate) kunne ikke opfyldes af dit kamera. Prøv en lavere opløsning eller framerate.";
+        } else if (error.name === 'SecurityError') {
+            userMessage = "En sikkerhedsfejl forhindrede adgang til kameraet. Sørg for at tilgå siden via **HTTPS** (f.eks. din GitHub Pages URL).";
+        } else if (error.name === 'AbortError') {
+            userMessage = "Adgangen til kameraet blev afbrudt. Prøv at starte igen.";
+        } else {
+            userMessage = "En ukendt fejl opstod ved start af kameraet.";
+        }
+        // --- End of detailed error handling ---
+
+        alert("FEJL ved start af kamera: " + userMessage); // Show an alert to the user
+        statusText.textContent = "🔴 Kamerastart fejlede"; // Update status in UI
+        // Optionally, re-enable start button or disable stop button here if desired
+    }
 }
-
 function stopCamera() {
     if (stream) {
         stream.getTracks().forEach(t => t.stop());
