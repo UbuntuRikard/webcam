@@ -94,6 +94,7 @@ setInterval(updateOverlayInfo, 1000);
 updateOverlayInfo();
 
 // === CAMERA & STREAM ===
+/*
 async function requestCameraPermission() {
     try {
         // Request a generic video stream to get permission, without specific constraints
@@ -105,43 +106,64 @@ async function requestCameraPermission() {
         throw e; // Propagate the error so getCameras doesn't proceed
     }
 }
-
+*/
 async function getCameras() {
-    await requestCameraPermission(); // Ensure permission is requested/granted first
+    // VI FJERNER requestCameraPermission HERFRA.
+    // Tilladelse vil nu blive anmodet om direkte af startCamera, når den kaldes.
 
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(d => d.kind === "videoinput");
-    cameraSelect.innerHTML = "";
+    try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === "videoinput");
+        cameraSelect.innerHTML = "";
 
-    videoDevices.forEach((device, index) => {
+        if (videoDevices.length === 0) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "Ingen kameraer fundet";
+            cameraSelect.appendChild(option);
+            statusText.textContent = "🔴 Ingen kameraer fundet";
+            return; // Stop execution if no cameras found
+        }
+
+        videoDevices.forEach((device, index) => {
+            const option = document.createElement("option");
+            option.value = device.deviceId;
+            let label = device.label || `Camera ${index + 1}`;
+            if (label.toLowerCase().includes('front')) {
+                label = `Front Camera (${label})`;
+            } else if (label.toLowerCase().includes('back') || label.toLowerCase().includes('environment')) {
+                label = `Bagkamera (${label})`;
+            } else {
+                label = `Kamera ${index + 1} (${label})`;
+            }
+            
+            option.textContent = label;
+            cameraSelect.appendChild(option);
+        });
+
+        const savedCamera = localStorage.getItem("selectedCameraId");
+        if (savedCamera && videoDevices.some(d => d.deviceId === savedCamera)) {
+            cameraSelect.value = savedCamera;
+        } else {
+            const backCamera = videoDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
+            if (backCamera) {
+                cameraSelect.value = backCamera.deviceId;
+            } else {
+                cameraSelect.value = videoDevices[0].deviceId;
+            }
+        }
+        // Opdater status til at vise, at kameraer er klar til valg
+        statusText.textContent = "⚪ Vælg kamera og IP";
+
+    } catch (e) {
+        console.error("Error enumerating devices:", e);
+        alert("Fejl ved hentning af kameraliste. Giv adgang til kameraet. (Fejlkode: " + e.name + ")");
+        cameraSelect.innerHTML = "";
         const option = document.createElement("option");
-        option.value = device.deviceId;
-        // Attempt to give more user-friendly labels
-        let label = device.label || `Camera ${index + 1}`;
-        if (label.toLowerCase().includes('front')) {
-            label = `Front Camera (${label})`;
-        } else if (label.toLowerCase().includes('back') || label.toLowerCase().includes('environment')) {
-            label = `Bagkamera (${label})`;
-        } else {
-            label = `Kamera ${index + 1} (${label})`;
-        }
-        
-        option.textContent = label;
+        option.value = "";
+        option.textContent = "Kunne ikke hente kameraer (tilladelse mangler/fejl)";
         cameraSelect.appendChild(option);
-    });
-
-    const savedCamera = localStorage.getItem("selectedCameraId");
-    if (savedCamera && videoDevices.some(d => d.deviceId === savedCamera)) {
-        cameraSelect.value = savedCamera;
-    } else if (videoDevices.length > 0) {
-        // If no saved camera, try to select the back camera by default if available
-        const backCamera = videoDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
-        if (backCamera) {
-            cameraSelect.value = backCamera.deviceId;
-        } else {
-            // Otherwise, just select the first available camera
-            cameraSelect.value = videoDevices[0].deviceId;
-        }
+        statusText.textContent = "🔴 Kunne ikke hente kameraer";
     }
 }
 getCameras();
