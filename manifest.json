@@ -1,7 +1,7 @@
 {
   "name": "Webcam Streamer PWA",
   "short_name": "Webcam",
-  "version": "1.0.1.5",
+  "version": "1.0.1.6",
   "description": "A compact webcam streaming PWA with offline support.",
   "start_url": "/webcam/index.html",
   "display": "standalone",

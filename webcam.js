@@ -261,7 +261,8 @@ async function startCamera() {
         statusText.textContent = "🔴 Kamerastart fejlede";
     }
 }
-*/ --- Slut AF Forsøg 1: startCamera funktion ---
+*/
+// --- Slut AF Forsøg 1: startCamera funktion ---
 // forsøg 1 slut
 
 // forsøg 2 start
