@@ -146,7 +146,19 @@ async function getCameras() {
 }
 getCameras();
 cameraSelect.addEventListener("change", saveConfig);
-
+// tilbehør for forsøg 2
+function getResolutionSettings() {
+    const val = resolutionSelect.value;
+    // MIDLERTIDIG ÆNDRING TIL TEST (FORSØG 2)
+    if (val === "vga") return { width: { exact: 640 }, height: { exact: 480 } };
+    if (val === "hd") return { width: { exact: 1280 }, height: { exact: 720 } };
+    if (val === "fhd") return { width: { exact: 1920 }, height: { exact: 1080 } };
+    // Fallback'en kan stadig være ideal, men vi forventer at en af de ovenstående rammes
+    return { width: { ideal: 640 }, height: { ideal: 480 } }; 
+}
+// slut på tilbehør
+/*
+ * denne skal ind efet at forsøg 2 er gennemført
 function getResolutionSettings() {
     const val = resolutionSelect.value;
     if (val === "vga") return { width: { ideal: 640 }, height: { ideal: 480 } }; // Use ideal
@@ -154,7 +166,7 @@ function getResolutionSettings() {
     if (val === "fhd") return { width: { ideal: 1920 }, height: { ideal: 1080 } }; // Use ideal
     return { width: { ideal: 640 }, height: { ideal: 480 } }; // Default to VGA with ideal
 }
-
+*/
 function getJPEGQuality() {
     return 0.92;
 }
@@ -254,6 +266,7 @@ async function startCamera() {
 
 // forsøg 2 start
 // --- Start AF Forsøg 2: startCamera funktion ---
+// --- Start AF Revideret Forsøg 2: startCamera funktion ---
 async function startCamera() {
     console.log("Attempting to start camera...");
     statusText.textContent = "🟡 Starter kamera...";
@@ -263,33 +276,33 @@ async function startCamera() {
         stream = null;
     }
 
-    // Henter opløsningsindstillingerne fra dropdown (disse er med 'ideal' fra getResolutionSettings)
-    const resolutionConstraintsFromDropdown = getResolutionSettings(); 
+    // Henter opløsningsindstillingerne fra dropdown.
+    // DISSE ER NU MED 'EXACT' PÅ GRUND AF DEN MIDLERTIDIGE ÆNDRING I getResolutionSettings()
+    const resolutionConstraints = getResolutionSettings(); 
     const selectedDeviceId = cameraSelect.value;
-    // const selectedDeviceLabel = cameraSelect.options[cameraSelect.selectedIndex]?.textContent.toLowerCase(); // <-- Ikke nødvendig for dette forsøg
-
+    
     let videoConstraints = {
         audio: false,
-        video: {}
+        video: {
+            // ALTID brug deviceId med 'exact'
+            deviceId: { exact: selectedDeviceId } 
+        }
     };
 
-    // --- VIGTIG ÆNDRING TIL BAGKAMERAET ---
-    // FJERN facingMode og brug KUN deviceId for ALLE kameravalg
-    if (selectedDeviceId) { // Vi bruger deviceId for ALT nu, inkl. front/bag
-        videoConstraints.video.deviceId = { exact: selectedDeviceId }; 
-        // Tilføj opløsning fra dropdown (som bruger 'ideal')
-        Object.assign(videoConstraints.video, resolutionConstraintsFromDropdown); 
-        // Hvis du vil kombinere med HARDKODET EXACT 640x480 som i Forsøg 1,
-        // ville du erstatte linjen ovenfor med:
-        // Object.assign(videoConstraints.video, { width: { exact: 640 }, height: { exact: 480 } });
-    } else {
-        // Fallback hvis ingen deviceId er valgt
-        videoConstraints.video = true;
+    // TILFØJ altid opløsningsbegrænsningerne herfra
+    Object.assign(videoConstraints.video, resolutionConstraints); 
+    
+    // Hvis dropdown for cameraSelect skulle være tom (meget usandsynligt med getCameras() logikken),
+    // ville dette være en fejl. Vi antager, at selectedDeviceId altid har en værdi.
+    if (!selectedDeviceId) {
+        alert("FEJL: Intet kamera er valgt. Prøv at genopfriske siden.");
+        statusText.textContent = "🔴 Kamerastart fejlede: Intet kamera valgt";
+        console.error("No camera selected for startCamera.");
+        return; // Afbryd funktionen
     }
-    // --- SLUT VIGTIG ÆNDRING ---
     
     // Log de endelige constraints, der sendes til getUserMedia
-    console.log("Using video constraints:", videoConstraints.video);
+    console.log("Using video constraints (Revised Attempt 2):", videoConstraints.video);
 
     try {
         stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
@@ -323,7 +336,7 @@ async function startCamera() {
         } else if (error.name === 'NotFoundError') {
             userMessage = "Ingen passende kameraer fundet på denne enhed. Sørg for, at din telefon har et fungerende kamera. (Fejlkode: NotFoundError)";
         } else if (error.name === 'OverconstrainedError') {
-            userMessage = `De specificerede videokrav (opløsning, framerate eller kamera-valg) kunne ikke opfyldes af dit kamera. Prøv at vælge en **lavere opløsning, eller lad opløsningen være standard for bagkameraet** (ved at fjerne opløsningsvalget for bagkameraet i appen). Fejldetaljer: ${error.message || 'Ukendt'}. (Fejlkode: OverconstrainedError, Constraint: ${error.constraint || 'Ukendt'})`;
+            userMessage = `De specificerede videokrav (opløsning, framerate eller kamera-valg) kunne ikke opfyldes af dit kamera. Prøv at vælge en **lavere opløsning**. Fejldetaljer: ${error.message || 'Ukendt'}. (Fejlkode: OverconstrainedError, Constraint: ${error.constraint || 'Ukendt'})`;
             console.warn("OverconstrainedError details:", error.constraint, error.message);
         } else if (error.name === 'SecurityError') {
             userMessage = "En sikkerhedsfejl forhindrede adgang til kameraet. Sørg for at tilgå siden via **HTTPS** (f.eks. din GitHub Pages URL). (Fejlkode: SecurityError)";
@@ -337,6 +350,7 @@ async function startCamera() {
         statusText.textContent = "🔴 Kamerastart fejlede";
     }
 }
+// --- Slut AF Revideret Forsøg 2: startCamera funktion ---
 // --- Slut AF Forsøg 2: startCamera funktion ---
 //
 // forsøg 2 slut
