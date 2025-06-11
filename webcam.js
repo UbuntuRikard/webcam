@@ -96,15 +96,18 @@ updateOverlayInfo();
 // === CAMERA & STREAM ===
 async function requestCameraPermission() {
     try {
+        // Request a generic video stream to get permission, without specific constraints
         await navigator.mediaDevices.getUserMedia({ video: true });
+        console.log("Initial camera permission granted.");
     } catch (e) {
-        alert("Camera permission was not granted."); // Translated message
-        throw e;
+        console.error("Initial camera permission request failed:", e);
+        alert("Kamera tilladelse blev ikke givet eller fejlede. Tjek telefonens indstillinger for Chrome/Webcam App."); 
+        throw e; // Propagate the error so getCameras doesn't proceed
     }
 }
 
 async function getCameras() {
-    await requestCameraPermission();
+    await requestCameraPermission(); // Ensure permission is requested/granted first
 
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(d => d.kind === "videoinput");
@@ -113,13 +116,32 @@ async function getCameras() {
     videoDevices.forEach((device, index) => {
         const option = document.createElement("option");
         option.value = device.deviceId;
-        option.textContent = device.label || `Camera ${index}`;
+        // Attempt to give more user-friendly labels
+        let label = device.label || `Camera ${index + 1}`;
+        if (label.toLowerCase().includes('front')) {
+            label = `Front Camera (${label})`;
+        } else if (label.toLowerCase().includes('back') || label.toLowerCase().includes('environment')) {
+            label = `Bagkamera (${label})`;
+        } else {
+            label = `Kamera ${index + 1} (${label})`;
+        }
+        
+        option.textContent = label;
         cameraSelect.appendChild(option);
     });
 
     const savedCamera = localStorage.getItem("selectedCameraId");
     if (savedCamera && videoDevices.some(d => d.deviceId === savedCamera)) {
         cameraSelect.value = savedCamera;
+    } else if (videoDevices.length > 0) {
+        // If no saved camera, try to select the back camera by default if available
+        const backCamera = videoDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
+        if (backCamera) {
+            cameraSelect.value = backCamera.deviceId;
+        } else {
+            // Otherwise, just select the first available camera
+            cameraSelect.value = videoDevices[0].deviceId;
+        }
     }
 }
 getCameras();
@@ -127,10 +149,10 @@ cameraSelect.addEventListener("change", saveConfig);
 
 function getResolutionSettings() {
     const val = resolutionSelect.value;
-    if (val === "vga") return { width: { exact: 640 }, height: { exact: 480 } };
-    if (val === "hd") return { width: { exact: 1280 }, height: { exact: 720 } };
-    if (val === "fhd") return { width: { exact: 1920 }, height: { exact: 1080 } };
-    return { width: { ideal: 640 }, height: { ideal: 480 } }; // Default to VGA
+    if (val === "vga") return { width: { ideal: 640 }, height: { ideal: 480 } }; // Use ideal
+    if (val === "hd") return { width: { ideal: 1280 }, height: { ideal: 720 } }; // Use ideal
+    if (val === "fhd") return { width: { ideal: 1920 }, height: { ideal: 1080 } }; // Use ideal
+    return { width: { ideal: 640 }, height: { ideal: 480 } }; // Default to VGA with ideal
 }
 
 function getJPEGQuality() {
@@ -146,19 +168,30 @@ async function startCamera() {
         stream = null; // Clear previous stream if it exists
     }
 
-    const resolution = getResolutionSettings();
-    const videoConstraints = {
-        ...resolution,
-        deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined
+    const resolutionConstraints = getResolutionSettings();
+    const selectedDeviceId = cameraSelect.value;
+    const selectedDeviceLabel = cameraSelect.options[cameraSelect.selectedIndex]?.textContent.toLowerCase();
+
+    let videoConstraints = {
+        audio: false,
+        video: { ...resolutionConstraints }
     };
 
+    // Prioritize facingMode if label hints at front/back, it's more reliable than deviceId sometimes
+    if (selectedDeviceLabel.includes('front')) {
+        videoConstraints.video.facingMode = 'user';
+    } else if (selectedDeviceLabel.includes('back') || selectedDeviceLabel.includes('miljø')) { // 'miljø' for environment in Danish
+        videoConstraints.video.facingMode = 'environment';
+    } else if (selectedDeviceId) {
+        // Fallback to deviceId if facingMode doesn't apply or is less reliable
+        // Use 'exact' only if facingMode fails, or if we have a specific ID.
+        // For robustness, sometimes 'ideal' for deviceId is better than 'exact'.
+        // Let's try 'exact' first, if issues persist, change to 'ideal'.
+        videoConstraints.video.deviceId = { exact: selectedDeviceId }; 
+    }
+
     try {
-        // This is where navigator.mediaDevices.getUserMedia() is called
-        // The error "NotReadableError: Could not start video source" originates here
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: videoConstraints,
-            audio: false
-        });
+        stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
 
         console.log("Camera stream obtained successfully.");
         statusText.textContent = "🟢 Kamera startet, forbinder..."; // Update status
@@ -173,22 +206,22 @@ async function startCamera() {
         video.style.display = "none";
         canvas.style.display = "block";
 
-        startSendingFrames(); // This starts the WebSocket connection and frame sending
+        startSendingFrames();
 
     } catch (error) {
         console.error("Error starting camera:", error);
         let userMessage = "Kunne ikke starte videokilde.";
 
-        // --- Detailed error handling based on error.name ---
         if (error.name === 'NotReadableError') {
             userMessage = "Kameraet er sandsynligvis i brug af en anden app, eller der er en midlertidig hardwarefejl. Prøv at **genstarte telefonen, lukke alle andre apps** (især dem der bruger kameraet), og sikre at intet andet bruger kameraet.";
         } else if (error.name === 'NotAllowedError') {
-            // This case is unlikely if you've manually set permissions, but included for completeness.
             userMessage = "Adgang til kameraet blev nægtet. Du skal give adgang i telefonens indstillinger (Indstillinger -> Apps -> Chrome/Webcam App -> Tilladelser -> Kamera).";
         } else if (error.name === 'NotFoundError') {
             userMessage = "Ingen passende kameraer fundet på denne enhed. Sørg for, at din telefon har et fungerende kamera.";
         } else if (error.name === 'OverconstrainedError') {
-            userMessage = "De specificerede videokrav (opløsning, framerate) kunne ikke opfyldes af dit kamera. Prøv en lavere opløsning eller framerate.";
+            // THIS IS THE MOST LIKELY ERROR FOR BACK CAMERA ISSUES IF IT'S NOT A NotReadableError
+            userMessage = `De specificerede videokrav (opløsning, framerate eller kamera-valg) kunne ikke opfyldes af dit kamera. Prøv en lavere opløsning eller framerate, eller vælg et andet kamera. Fejldetaljer: ${error.message || 'Ukendt'}`;
+            console.warn("OverconstrainedError details:", error.constraint, error.message);
         } else if (error.name === 'SecurityError') {
             userMessage = "En sikkerhedsfejl forhindrede adgang til kameraet. Sørg for at tilgå siden via **HTTPS** (f.eks. din GitHub Pages URL).";
         } else if (error.name === 'AbortError') {
@@ -196,13 +229,12 @@ async function startCamera() {
         } else {
             userMessage = "En ukendt fejl opstod ved start af kameraet.";
         }
-        // --- End of detailed error handling ---
 
-        alert("FEJL ved start af kamera: " + userMessage); // Show an alert to the user
-        statusText.textContent = "🔴 Kamerastart fejlede"; // Update status in UI
-        // Optionally, re-enable start button or disable stop button here if desired
+        alert("FEJL ved start af kamera: " + userMessage);
+        statusText.textContent = "🔴 Kamerastart fejlede";
     }
 }
+
 function stopCamera() {
     if (stream) {
         stream.getTracks().forEach(t => t.stop());
@@ -227,9 +259,7 @@ function startSendingFrames() {
     const fps = parseInt(fpsSelect.value, 10);
     const interval = 1000 / fps;
 
-    // --- CRITICAL CHANGE: Use wss:// for secure WebSocket ---
-    ws = new WebSocket(`wss://${ip}:${port}`); // Changed from ws:// to wss://
-    // --- END CRITICAL CHANGE ---
+    ws = new WebSocket(`wss://${ip}:${port}`); 
 
     ws.onopen = () => {
         statusText.textContent = "🔵 Streaming started";
@@ -238,21 +268,18 @@ function startSendingFrames() {
 
             // === OVERLAY DRAWING ON CANVAS ===
             ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-            ctx.fillRect(0, 0, canvas.width, 40); // Adjusted height for 2 lines of text + padding
+            ctx.fillRect(0, 0, canvas.width, 40); 
 
             ctx.fillStyle = "white";
-            ctx.font = "14px Arial"; // Adjusted font size for better readability
+            ctx.font = "14px Arial"; 
 
-            // Top Row: IP (left), Version (right)
-            ctx.fillText(overlayData.ip, 10, 20); // IP at top-left, slightly higher
+            ctx.fillText(overlayData.ip, 10, 20); 
             const versionTextWidth = ctx.measureText(overlayData.version).width;
-            ctx.fillText(overlayData.version, canvas.width - versionTextWidth - 10, 20); // Version at top-right
+            ctx.fillText(overlayData.version, canvas.width - versionTextWidth - 10, 20); 
 
-            // Bottom Row: Resolution (left), Battery (right)
-            ctx.fillText(`${overlayData.resolution}`, 10, 40); // Resolution below IP
+            ctx.fillText(`${overlayData.resolution}`, 10, 40); 
             const batteryTextWidth = ctx.measureText(overlayData.battery).width;
-            ctx.fillText(overlayData.battery, canvas.width - batteryTextWidth - 10, 40); // Battery at bottom-right
-
+            ctx.fillText(overlayData.battery, canvas.width - batteryTextWidth - 10, 40); 
 
             canvas.toBlob(blob => {
                 if (ws.readyState === WebSocket.OPEN) {
@@ -263,12 +290,14 @@ function startSendingFrames() {
     };
 
     ws.onerror = (error) => {
-        console.error("WebSocket Error:", error); // Log the error for debugging
-        statusText.textContent = "🔴 Could not connect to server";
+        console.error("WebSocket Error:", error); 
+        statusText.textContent = "🔴 Kunne ikke forbinde til server"; // Updated message
+        // Add more specific error handling here if needed, e.g., for self-signed certs
+        alert("FEJL: Kunne ikke forbinde til streamingserveren. Tjek IP/Port, firewall og serverstatus.");
     };
 
     ws.onclose = () => {
-        statusText.textContent = "⚪ Streaming stopped";
+        statusText.textContent = "⚪ Streaming stoppet"; // Updated message
         clearInterval(sendInterval);
     };
 }
