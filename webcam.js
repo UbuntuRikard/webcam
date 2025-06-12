@@ -1,4 +1,4 @@
-// webcam.js - Version med zoom-funktionalitet
+// webcam.js - Den samlede, forventede fungerende version (korrigeret for din eksisterende Gem-knap)
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -9,12 +9,12 @@ const cameraSelect = document.getElementById("cameraSelect");
 const resolutionSelect = document.getElementById("resolutionSelect");
 const fpsSelect = document.getElementById("fpsSelect");
 const ipInput = document.getElementById("serverIp");
-const portInput = document.getElementById("serverPort");
-const saveBtn = document.getElementById("saveConfigBtn");
+const portInput = document = document.getElementById("serverPort");
+const saveBtn = document.getElementById("saveConfigBtn"); // <--- REFERERER TIL DIN EKSISTERENDE GEM-KNAP
 const statusText = document.getElementById("status");
 
 const ipaddressOverlay = document.getElementById("ipaddress");
-const batteryOverlay = document.getElementById("battery");
+const batteryOverlay = document = document.getElementById("battery");
 const appVersionOverlay = document.getElementById("appVersion");
 
 // Zoom buttons (assuming these IDs are in your HTML)
@@ -39,8 +39,7 @@ function saveConfig() {
     localStorage.setItem("selectedCameraId", cameraSelect.value);
     localStorage.setItem("selectedResolution", resolutionSelect.value);
     localStorage.setItem("selectedFps", fpsSelect.value);
-    // Optional: Save current zoom level
-    localStorage.setItem("currentZoomLevel", currentZoomLevel);
+    localStorage.setItem("currentZoomLevel", currentZoomLevel); // Save current zoom level
 }
 
 function loadConfig() {
@@ -50,7 +49,8 @@ function loadConfig() {
     fpsSelect.value = localStorage.getItem("selectedFps") || "10";
     currentZoomLevel = parseFloat(localStorage.getItem("currentZoomLevel")) || 1; // Load zoom level
 }
-saveBtn.addEventListener("click", () => {
+// Brug din eksisterende gem-knap (saveBtn) til at kalde saveConfig
+saveBtn.addEventListener("click", () => { // <--- Event listener på DIN KNAP
     saveConfig();
     updateOverlayInfo();
 });
@@ -285,7 +285,7 @@ function startSendingFrames() {
     const fps = parseInt(fpsSelect.value, 10);
     const interval = 1000 / fps;
 
-    ws = new WebSocket(`wss://${ip}:${port}`);
+    ws = new WebSocket(`wss://${ip}:${port}`); 
 
     ws.onopen = () => {
         statusText.textContent = "🔵 Streaming started";
@@ -309,19 +309,18 @@ function startSendingFrames() {
 
             // === OVERLAY DRAWING ON CANVAS ===
             ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-            ctx.fillRect(0, 0, canvas.width, 40);
+            ctx.fillRect(0, 0, canvas.width, 40); 
 
             ctx.fillStyle = "white";
-            ctx.font = "14px Arial";
+            ctx.font = "14px Arial"; 
 
-            ctx.fillText(overlayData.ip, 10, 20);
+            ctx.fillText(overlayData.ip, 10, 20); 
             const versionTextWidth = ctx.measureText(overlayData.version).width;
-            ctx.fillText(overlayData.version, canvas.width - versionTextWidth - 10, 20);
+            ctx.fillText(overlayData.version, canvas.width - versionTextWidth - 10, 20); 
 
-            // Add zoom level to overlay
-            ctx.fillText(`${overlayData.resolution} (Zoom: x${currentZoomLevel.toFixed(1)})`, 10, 40);
+            ctx.fillText(`${overlayData.resolution} (Zoom: x${currentZoomLevel.toFixed(1)})`, 10, 40); 
             const batteryTextWidth = ctx.measureText(overlayData.battery).width;
-            ctx.fillText(overlayData.battery, canvas.width - batteryTextWidth - 10, 40);
+            ctx.fillText(overlayData.battery, canvas.width - batteryTextWidth - 10, 40); 
 
             canvas.toBlob(blob => {
                 if (ws.readyState === WebSocket.OPEN) {
@@ -332,13 +331,13 @@ function startSendingFrames() {
     };
 
     ws.onerror = (error) => {
-        console.error("WebSocket Error:", error);
-        statusText.textContent = "🔴 Kunne ikke forbinde til server";
+        console.error("WebSocket Error:", error); 
+        statusText.textContent = "🔴 Kunne ikke forbinde til server"; 
         alert("FEJL: Kunne ikke forbinde til streamingserveren. Tjek IP/Port, firewall og serverstatus.");
     };
 
     ws.onclose = () => {
-        statusText.textContent = "⚪ Streaming stoppet";
+        statusText.textContent = "⚪ Streaming stoppet"; 
         clearInterval(sendInterval);
     };
 }

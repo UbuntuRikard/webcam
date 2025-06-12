@@ -10,30 +10,29 @@
 </head>
 <body>
 	<div class="controls-left">
-		<button id="zoom5Btn" class="control-btn">x5</button>
-		<button id="zoom4Btn" class="control-btn">x4</button>
-		<button id="zoom3Btn" class="control-btn">x3</button>
-		<button id="zoom2Btn" class="control-btn">x2</button>
-		<button id="zoom1Btn" class="control-btn">x1</button>
+		<button id="zoom5Btn" class="zoom-btn">x5</button>
+		<button id="zoom4Btn" class="zoom-btn">x4</button>
+		<button id="zoom3Btn" class="zoom-btn">x3</button>
+		<button id="zoom2Btn" class="zoom-btn">x2</button>
+		<button id="zoom1Btn" class="zoom-btn">x1</button>
 	</div>
 
 	<video id="video" autoplay playsinline style="display:none;"></video>
 	<canvas id="canvas" style="display:block;"></canvas>
 
-	<button id="saveConfigBtn" class="control-btn">Gem Konfiguration</button>
-
 	<style>
-		/* Generel stil for knapper */
+		/* Generel stil for dine almindelige kontrolknapper (som din Gem Konfiguration) */
 		.control-btn {
 			padding: 8px 12px;
-			margin-bottom: 5px; /* Lidt plads mellem knapperne */
 			border: 1px solid #ccc;
 			border-radius: 4px;
 			background-color: #f0f0f0;
 			cursor: pointer;
-			font-size: 14px; /* Samme størrelse som "Gem Konfiguration" */
-			width: 100px; /* Eller en passende bredde */
+			font-size: 14px;
 			text-align: center;
+			/* Beholder auto-bredde for denne type knap, da den kan have tekst/ikon */
+			width: auto;
+			white-space: nowrap; /* Undgå linjeskift i knaptekst */
 		}
 
 		.control-btn:hover {
@@ -42,13 +41,33 @@
 
 		/* Styling for at placere zoom-knapper i venstre side */
 		.controls-left {
-			position: absolute; /* Eller brug flexbox/grid i din hovedlayout */
+			position: absolute;
 			top: 60px; /* Juster efter behov for at undgå at dække top-overlay */
 			left: 10px;
 			display: flex;
 			flex-direction: column; /* Stabler knapper vertikalt */
 			gap: 5px; /* Plads mellem knapper */
 			z-index: 10; /* Sørg for at knapperne er over canvas/video */
+		}
+
+		/* Specifik stil for zoom-knapperne */
+		.zoom-btn {
+			padding: 8px 5px; /* Mindre padding for at gøre dem smallere */
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			background-color: #f0f0f0;
+			cursor: pointer;
+			font-size: 14px;
+			text-align: center;
+			/* Gør dem smallere - ca. bredden af to tegn */
+			width: 35px; /* Juster dette tal for at få den præcise bredde du ønsker */
+			min-width: 35px; /* Sørg for at den ikke bliver mindre */
+			max-width: 35px; /* Sørg for at den ikke bliver større */
+			box-sizing: border-box; /* Sørg for at padding og border er inkluderet i bredden */
+		}
+
+		.zoom-btn:hover {
+			background-color: #e0e0e0;
 		}
 	</style>
   <div id="overlay">
