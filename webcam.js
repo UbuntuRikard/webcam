@@ -1,4 +1,4 @@
-// webcam.js - Den samlede, forventede fungerende version (korrigeret for din eksisterende Gem-knap)
+// webcam.js - Den samlede, forventede fungerende version (optimeret zoom)
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -10,7 +10,7 @@ const resolutionSelect = document.getElementById("resolutionSelect");
 const fpsSelect = document.getElementById("fpsSelect");
 const ipInput = document.getElementById("serverIp");
 const portInput = document = document.getElementById("serverPort");
-const saveBtn = document.getElementById("saveConfigBtn"); // <--- REFERERER TIL DIN EKSISTERENDE GEM-KNAP
+const saveBtn = document.getElementById("saveConfigBtn"); // <--- DIN EKSISTERENDE GEM-KNAP
 const statusText = document.getElementById("status");
 
 const ipaddressOverlay = document.getElementById("ipaddress");
@@ -127,7 +127,7 @@ async function getCameras() {
             let label = device.label || `Camera ${index + 1}`;
             if (label.toLowerCase().includes('front')) {
                 label = `Front Camera (${label})`;
-            } else if (label.toLowerCase().includes('back') || label.toLowerCase().includes('environment')) {
+            } else if (label.toLowerCase().includes('back') || label.toLowerCase().includes('miljø') || label.toLowerCase().includes('environment')) {
                 label = `Bagkamera (${label})`;
             } else {
                 label = `Kamera ${index + 1} (${label})`;
@@ -163,12 +163,14 @@ async function getCameras() {
 getCameras();
 cameraSelect.addEventListener("change", saveConfig);
 
+// getResolutionSettings() definerer nu KUN den ønskede OUTPUT-opløsning for canvas
+// Vi anmoder om den maksimale INPUT-opløsning i startCamera
 function getResolutionSettings() {
     const val = resolutionSelect.value;
-    if (val === "vga") return { width: { ideal: 640 }, height: { ideal: 480 } };
-    if (val === "hd") return { width: { ideal: 1280 }, height: { ideal: 720 } };
-    if (val === "fhd") return { width: { ideal: 1920 }, height: { ideal: 1080 } };
-    return { width: { ideal: 640 }, height: { ideal: 480 } };
+    if (val === "vga") return { width: 640, height: 480 };
+    if (val === "hd") return { width: 1280, height: 720 };
+    if (val === "fhd") return { width: 1920, height: 1080 };
+    return { width: 640, height: 480 }; // Default til VGA
 }
 
 function getJPEGQuality() {
@@ -192,12 +194,16 @@ async function startCamera() {
         return;
     }
 
-    const resolutionConstraints = getResolutionSettings();
+    // --- NYT: Anmod om HØJEST MULIG opløsning fra kameraet ---
+    // Vi beder om en meget høj 'ideal' opløsning. Browseren vil give os den højeste
+    // den understøtter, der ikke overstiger dette ideal (f.eks. 4608x2592 hvis tilgængelig).
+    let highResolutionConstraint = { width: { ideal: 4096 }, height: { ideal: 2160 } }; // F.eks. 4K resolution
+
     const selectedDeviceLabel = cameraSelect.options[cameraSelect.selectedIndex]?.textContent.toLowerCase();
 
     let videoConstraints = {
         audio: false,
-        video: { ...resolutionConstraints }
+        video: { ...highResolutionConstraint } // Start med høj opløsning for input
     };
 
     if (selectedDeviceLabel.includes('front')) {
@@ -213,7 +219,7 @@ async function startCamera() {
     const fps = parseInt(fpsSelect.value, 10);
     videoConstraints.video.frameRate = { ideal: fps };
 
-    console.log("Using video constraints (Final Version):", videoConstraints.video);
+    console.log("Using video constraints (Max Input Resolution):", videoConstraints.video);
 
     try {
         stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
@@ -224,10 +230,15 @@ async function startCamera() {
         video.srcObject = stream;
         video.play();
 
-        const settings = stream.getVideoTracks()[0].getSettings();
-        canvas.width = settings.width;
-        canvas.height = settings.height;
-        console.log(`Actual camera resolution: ${settings.width}x${settings.height}, Actual FPS: ${settings.frameRate}`);
+        const actualVideoSettings = stream.getVideoTracks()[0].getSettings();
+        const selectedCanvasResolution = getResolutionSettings(); // Hent den ønskede OUTPUT-opløsning
+        
+        // Canvas dimensioner sættes til den valgte output-opløsning
+        canvas.width = selectedCanvasResolution.width;
+        canvas.height = selectedCanvasResolution.height;
+
+        console.log(`Actual camera INPUT resolution: ${actualVideoSettings.width}x${actualVideoSettings.height}, Actual FPS: ${actualVideoSettings.frameRate}`);
+        console.log(`Canvas OUTPUT resolution (for stream): ${canvas.width}x${canvas.height}`);
 
 
         video.style.display = "none";
@@ -290,7 +301,8 @@ function startSendingFrames() {
     ws.onopen = () => {
         statusText.textContent = "🔵 Streaming started";
         sendInterval = setInterval(() => {
-            // Get actual video dimensions
+            // Get actual video dimensions of the STREAM WE RECEIVED FROM CAMERA
+            // This will now be the highest possible resolution (e.g., 4608x2592)
             const videoWidth = video.videoWidth;
             const videoHeight = video.videoHeight;
 
@@ -300,11 +312,11 @@ function startSendingFrames() {
             const cropX = (videoWidth - cropWidth) / 2;
             const cropY = (videoHeight - cropHeight) / 2;
 
-            // Draw cropped video to canvas, filling the canvas (output resolution)
+            // Draw cropped video (from high resolution source) to canvas (at selected output resolution)
             ctx.drawImage(
                 video,
-                cropX, cropY, cropWidth, cropHeight, // Source (cropped) rectangle
-                0, 0, canvas.width, canvas.height     // Destination (canvas size) rectangle
+                cropX, cropY, cropWidth, cropHeight, // Source (cropped) rectangle from high-res video
+                0, 0, canvas.width, canvas.height     // Destination (canvas size - VGA/HD/FHD) rectangle
             );
 
             // === OVERLAY DRAWING ON CANVAS ===
