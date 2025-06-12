@@ -9,6 +9,48 @@
   <link rel="manifest" href="/webcam/manifest.json"> 
 </head>
 <body>
+	<div class="controls-left">
+		<button id="zoom5Btn" class="control-btn">x5</button>
+		<button id="zoom4Btn" class="control-btn">x4</button>
+		<button id="zoom3Btn" class="control-btn">x3</button>
+		<button id="zoom2Btn" class="control-btn">x2</button>
+		<button id="zoom1Btn" class="control-btn">x1</button>
+	</div>
+
+	<video id="video" autoplay playsinline style="display:none;"></video>
+	<canvas id="canvas" style="display:block;"></canvas>
+
+	<button id="saveConfigBtn" class="control-btn">Gem Konfiguration</button>
+
+	<style>
+		/* Generel stil for knapper */
+		.control-btn {
+			padding: 8px 12px;
+			margin-bottom: 5px; /* Lidt plads mellem knapperne */
+			border: 1px solid #ccc;
+			border-radius: 4px;
+			background-color: #f0f0f0;
+			cursor: pointer;
+			font-size: 14px; /* Samme størrelse som "Gem Konfiguration" */
+			width: 100px; /* Eller en passende bredde */
+			text-align: center;
+		}
+
+		.control-btn:hover {
+			background-color: #e0e0e0;
+		}
+
+		/* Styling for at placere zoom-knapper i venstre side */
+		.controls-left {
+			position: absolute; /* Eller brug flexbox/grid i din hovedlayout */
+			top: 60px; /* Juster efter behov for at undgå at dække top-overlay */
+			left: 10px;
+			display: flex;
+			flex-direction: column; /* Stabler knapper vertikalt */
+			gap: 5px; /* Plads mellem knapper */
+			z-index: 10; /* Sørg for at knapperne er over canvas/video */
+		}
+	</style>
   <div id="overlay">
     <div id="ipaddress" class="overlay-info"></div>
     <div id="appVersion" class="overlay-info"></div>
