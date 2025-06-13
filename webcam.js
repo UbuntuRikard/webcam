@@ -9,18 +9,18 @@ const cameraSelect = document.getElementById("cameraSelect");
 const resolutionSelect = document.getElementById("resolutionSelect");
 const fpsSelect = document.getElementById("fpsSelect");
 const ipInput = document.getElementById("serverIp");
-const portInput = document.getElementById("serverPort"); // Corrected 'document = document'
+const portInput = document.getElementById("serverPort");
 const saveBtn = document.getElementById("saveConfigBtn"); // Your existing Save button
 const statusText = document.getElementById("status");
 
 const ipaddressOverlay = document.getElementById("ipaddress");
-const batteryOverlay = document.getElementById("battery"); // Corrected 'document = document'
+const batteryOverlay = document.getElementById("battery");
 const appVersionOverlay = document.getElementById("appVersion");
 
 // Zoom buttons (assuming these IDs are in your HTML)
-const zoom8Btn = document.getElementById("zoom8Btn"); // New button
-const zoom7Btn = document.getElementById("zoom7Btn"); // New button
-const zoom6Btn = document.getElementById("zoom6Btn"); // New button
+const zoom8Btn = document.getElementById("zoom8Btn");
+const zoom7Btn = document.getElementById("zoom7Btn");
+const zoom6Btn = document.getElementById("zoom6Btn");
 const zoom5Btn = document.getElementById("zoom5Btn");
 const zoom4Btn = document.getElementById("zoom4Btn");
 const zoom3Btn = document.getElementById("zoom3Btn");
@@ -82,7 +82,7 @@ loadAppVersion();
 let overlayData = {
     ip: "",
     resolution: "",
-    battery: "Battery: N/A", // Changed to N/A for consistency
+    battery: "Battery: N/A",
     version: ""
 };
 
@@ -131,7 +131,7 @@ async function getCameras() {
             if (label.toLowerCase().includes('front')) {
                 label = `Front Camera (${label})`;
             } else if (label.toLowerCase().includes('back') || label.toLowerCase().includes('environment')) {
-                label = `Rear Camera (${label})`; // Changed to Rear Camera
+                label = `Rear Camera (${label})`;
             } else {
                 label = `Camera ${index + 1} (${label})`;
             }
@@ -150,17 +150,17 @@ async function getCameras() {
                 cameraSelect.value = videoDevices[0].deviceId;
             }
         }
-        statusText.textContent = "⚪ Select camera and IP"; // Updated status text
+        statusText.textContent = "⚪ Select camera and IP";
 
     } catch (e) {
         console.error("Error enumerating devices:", e);
-        alert("Error fetching camera list. Please grant camera access. (Error code: " + e.name + ")"); // Translated alert
+        alert("Error fetching camera list. Please grant camera access. (Error code: " + e.name + ")");
         cameraSelect.innerHTML = "";
         const option = document.createElement("option");
         option.value = "";
-        option.textContent = "Could not fetch cameras (permission missing/error)"; // Translated text
+        option.textContent = "Could not fetch cameras (permission missing/error)";
         cameraSelect.appendChild(option);
-        statusText.textContent = "🔴 Could not fetch cameras"; // Translated status text
+        statusText.textContent = "🔴 Could not fetch cameras";
     }
 }
 getCameras();
@@ -182,7 +182,7 @@ function getJPEGQuality() {
 
 async function startCamera() {
     console.log("Attempting to start camera...");
-    statusText.textContent = "🟡 Starting camera..."; // Translated status text
+    statusText.textContent = "🟡 Starting camera...";
 
     if (stream) {
         stream.getTracks().forEach(t => t.stop());
@@ -191,14 +191,14 @@ async function startCamera() {
 
     const selectedDeviceId = cameraSelect.value;
     if (!selectedDeviceId) {
-        alert("ERROR: No camera selected in the dropdown. Try refreshing the page, or grant camera permissions."); // Translated alert
-        statusText.textContent = "🔴 Camera start failed: No camera selected"; // Translated status text
+        alert("ERROR: No camera selected in the dropdown. Try refreshing the page, or grant camera permissions.");
+        statusText.textContent = "🔴 Camera start failed: No camera selected";
         console.error("No camera selected for startCamera.");
         return;
     }
 
-    // --- NEW: Request the HIGHEST POSSIBLE resolution from the camera ---
-    // We request a very high 'ideal' resolution. The browser will provide the highest
+    // Request the HIGHEST POSSIBLE resolution from the camera.
+    // We ask for a very high 'ideal' resolution. The browser will provide the highest
     // it supports that doesn't exceed this ideal (e.g., 4608x2592 if available).
     let highResolutionConstraint = { width: { ideal: 4096 }, height: { ideal: 2160 } }; // Example 4K resolution
 
@@ -211,7 +211,7 @@ async function startCamera() {
 
     if (selectedDeviceLabel.includes('front')) {
         videoConstraints.video.facingMode = 'user';
-    } else if (selectedDeviceLabel.includes('back') || selectedDeviceLabel.includes('environment')) { // Removed 'miljø' for consistency
+    } else if (selectedDeviceLabel.includes('back') || selectedDeviceLabel.includes('environment')) {
         videoConstraints.video.facingMode = 'environment';
     } else if (selectedDeviceId) {
         videoConstraints.video.deviceId = { exact: selectedDeviceId };
@@ -228,20 +228,21 @@ async function startCamera() {
         stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
 
         console.log("Camera stream obtained successfully.");
-        statusText.textContent = "🟢 Camera started, connecting..."; // Translated status text
+        statusText.textContent = "🟢 Camera started, connecting...";
 
         video.srcObject = stream;
         video.play();
 
         const actualVideoSettings = stream.getVideoTracks()[0].getSettings();
         const selectedCanvasResolution = getResolutionSettings(); // Get the desired OUTPUT resolution
-
+        
         // Canvas dimensions are set to the selected output resolution
         canvas.width = selectedCanvasResolution.width;
         canvas.height = selectedCanvasResolution.height;
 
         console.log(`Actual camera INPUT resolution: ${actualVideoSettings.width}x${actualVideoSettings.height}, Actual FPS: ${actualVideoSettings.frameRate}`);
         console.log(`Canvas OUTPUT resolution (for stream): ${canvas.width}x${canvas.height}`);
+
 
         video.style.display = "none";
         canvas.style.display = "block";
@@ -250,27 +251,27 @@ async function startCamera() {
 
     } catch (error) {
         console.error("Error starting camera:", error);
-        let userMessage = "Could not start video source."; // Translated message
+        let userMessage = "Could not start video source.";
 
         if (error.name === 'NotReadableError') {
-            userMessage = "The camera is likely in use by another app, or there's a temporary hardware error. Try to **restart the phone, close all other apps** (especially those using the camera), and ensure nothing else is using the camera. (Error code: NotReadableError)"; // Translated message
+            userMessage = "The camera is likely in use by another app, or there's a temporary hardware error. Try to **restart the phone, close all other apps** (especially those using the camera), and ensure nothing else is using the camera. (Error code: NotReadableError)";
         } else if (error.name === 'NotAllowedError') {
-            userMessage = "Camera access was denied. You need to grant access in your phone's settings (Settings -> Apps -> Chrome/Webcam App -> Permissions -> Camera). (Error code: NotAllowedError)"; // Translated message
+            userMessage = "Camera access was denied. You need to grant access in your phone's settings (Settings -> Apps -> Chrome/Webcam App -> Permissions -> Camera). (Error code: NotAllowedError)";
         } else if (error.name === 'NotFoundError') {
-            userMessage = "No suitable cameras found on this device. Ensure your phone has a functioning camera. (Error code: NotFoundError)"; // Translated message
+            userMessage = "No suitable cameras found on this device. Ensure your phone has a functioning camera. (Error code: NotFoundError)";
         } else if (error.name === 'OverconstrainedError') {
-            userMessage = `The specified video requirements (resolution, framerate, or camera selection) could not be met by your camera. Try selecting a **lower resolution, or adjust the FPS setting**. Error details: ${error.message || 'Unknown'}. (Error code: OverconstrainedError, Constraint: ${error.constraint || 'Unknown'})`; // Translated message
+            userMessage = `The specified video requirements (resolution, framerate, or camera selection) could not be met by your camera. Try selecting a **lower resolution, or adjust the FPS setting**. Error details: ${error.message || 'Unknown'}. (Error code: OverconstrainedError, Constraint: ${error.constraint || 'Unknown'})`;
             console.warn("OverconstrainedError details:", error.constraint, error.message);
         } else if (error.name === 'SecurityError') {
-            userMessage = "A security error prevented camera access. Ensure you are accessing the page via **HTTPS** (e.g., your GitHub Pages URL). (Error code: SecurityError)"; // Translated message
+            userMessage = "A security error prevented camera access. Ensure you are accessing the page via **HTTPS** (e.g., your GitHub Pages URL). (Error code: SecurityError)";
         } else if (error.name === 'AbortError') {
-            userMessage = "Camera access was aborted. Try starting again. (Error code: AbortError)"; // Translated message
+            userMessage = "Camera access was aborted. Try starting again. (Error code: AbortError)";
         } else {
-            userMessage = "An unknown error occurred while starting the camera. (Error code: " + error.name + ")"; // Translated message
+            userMessage = "An unknown error occurred while starting the camera. (Error code: " + error.name + ")";
         }
 
-        alert("ERROR starting camera: " + userMessage); // Translated alert
-        statusText.textContent = "🔴 Camera start failed"; // Translated status text
+        alert("ERROR starting camera: " + userMessage);
+        statusText.textContent = "🔴 Camera start failed";
     }
 }
 
@@ -284,37 +285,37 @@ function stopCamera() {
         ws = null;
     }
     clearInterval(sendInterval);
-    statusText.textContent = "⚪ Streaming stopped"; // Translated status text
+    statusText.textContent = "⚪ Streaming stopped";
 }
 
 function startSendingFrames() {
     const ip = ipInput.value;
     const port = portInput.value;
     if (!ip || !port) {
-        alert("Please enter server IP and port first."); // Translated alert
+        alert("Please enter server IP and port first.");
         return;
     }
 
     const fps = parseInt(fpsSelect.value, 10);
     const interval = 1000 / fps;
 
-    ws = new WebSocket(`wss://${ip}:${port}`);
+    ws = new WebSocket(`wss://${ip}:${port}`); 
 
     ws.onopen = () => {
-        statusText.textContent = "🔵 Streaming started"; // Translated status text
+        statusText.textContent = "🔵 Streaming started";
         sendInterval = setInterval(() => {
-            // Get actual video dimensions of the STREAM WE RECEIVED FROM CAMERA
-            // This will now be the highest possible resolution (e.g., 4608x2592)
+            // Get actual video dimensions of the stream received from the camera.
+            // This will be the highest possible resolution (e.g., 4608x2592).
             const videoWidth = video.videoWidth;
             const videoHeight = video.videoHeight;
 
-            // Calculate source crop area for current zoom level
+            // Calculate source crop area for current zoom level.
             const cropWidth = videoWidth / currentZoomLevel;
             const cropHeight = videoHeight / currentZoomLevel;
             const cropX = (videoWidth - cropWidth) / 2;
             const cropY = (videoHeight - cropHeight) / 2;
 
-            // Draw cropped video (from high resolution source) to canvas (at selected output resolution)
+            // Draw cropped video (from high resolution source) to canvas (at selected output resolution).
             ctx.drawImage(
                 video,
                 cropX, cropY, cropWidth, cropHeight, // Source (cropped) rectangle from high-res video
@@ -323,18 +324,18 @@ function startSendingFrames() {
 
             // === OVERLAY DRAWING ON CANVAS ===
             ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-            ctx.fillRect(0, 0, canvas.width, 40);
+            ctx.fillRect(0, 0, canvas.width, 40); 
 
             ctx.fillStyle = "white";
-            ctx.font = "14px Arial";
+            ctx.font = "14px Arial"; 
 
-            ctx.fillText(overlayData.ip, 10, 20);
+            ctx.fillText(overlayData.ip, 10, 20); 
             const versionTextWidth = ctx.measureText(overlayData.version).width;
-            ctx.fillText(overlayData.version, canvas.width - versionTextWidth - 10, 20);
+            ctx.fillText(overlayData.version, canvas.width - versionTextWidth - 10, 20); 
 
-            ctx.fillText(`${overlayData.resolution} (Zoom: x${currentZoomLevel.toFixed(1)})`, 10, 40);
+            ctx.fillText(`${overlayData.resolution} (Zoom: x${currentZoomLevel.toFixed(1)})`, 10, 40); 
             const batteryTextWidth = ctx.measureText(overlayData.battery).width;
-            ctx.fillText(overlayData.battery, canvas.width - batteryTextWidth - 10, 40);
+            ctx.fillText(overlayData.battery, canvas.width - batteryTextWidth - 10, 40); 
 
             canvas.toBlob(blob => {
                 if (ws.readyState === WebSocket.OPEN) {
@@ -345,13 +346,13 @@ function startSendingFrames() {
     };
 
     ws.onerror = (error) => {
-        console.error("WebSocket Error:", error);
-        statusText.textContent = "🔴 Could not connect to server"; // Translated status text
-        alert("ERROR: Could not connect to the streaming server. Check IP/Port, firewall, and server status."); // Translated alert
+        console.error("WebSocket Error:", error); 
+        statusText.textContent = "🔴 Could not connect to server"; 
+        alert("ERROR: Could not connect to the streaming server. Check IP/Port, firewall, and server status.");
     };
 
     ws.onclose = () => {
-        statusText.textContent = "⚪ Streaming stopped"; // Translated status text
+        statusText.textContent = "⚪ Streaming stopped"; 
         clearInterval(sendInterval);
     };
 }
@@ -365,9 +366,9 @@ function setZoomLevel(level) {
 }
 
 // Attach event listeners for all 8 zoom buttons
-zoom8Btn.addEventListener("click", () => setZoomLevel(8)); // New button
-zoom7Btn.addEventListener("click", () => setZoomLevel(7)); // New button
-zoom6Btn.addEventListener("click", () => setZoomLevel(6)); // New button
+zoom8Btn.addEventListener("click", () => setZoomLevel(8));
+zoom7Btn.addEventListener("click", () => setZoomLevel(7));
+zoom6Btn.addEventListener("click", () => setZoomLevel(6));
 zoom5Btn.addEventListener("click", () => setZoomLevel(5));
 zoom4Btn.addEventListener("click", () => setZoomLevel(4));
 zoom3Btn.addEventListener("click", () => setZoomLevel(3));

@@ -1,128 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Webcam Streamer</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="manifest" href="/webcam/manifest.json"> 
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Webcam Streamer</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="manifest" href="/webcam/manifest.json"> 
 </head>
 <body>
-	<div class="controls-left">
-		<button id="zoom8Btn" class="zoom-btn">x8</button>
-		<button id="zoom7Btn" class="zoom-btn">x7</button>
-		<button id="zoom6Btn" class="zoom-btn">x6</button>
-		<button id="zoom5Btn" class="zoom-btn">x5</button>
-		<button id="zoom4Btn" class="zoom-btn">x4</button>
-		<button id="zoom3Btn" class="zoom-btn">x3</button>
-		<button id="zoom2Btn" class="zoom-btn">x2</button>
-		<button id="zoom1Btn" class="zoom-btn">x1</button>
-	</div>
-
-	<style>
-		/* Generel stil for dine almindelige kontrolknapper (som din Gem Konfiguration) */
-		.control-btn {
-			padding: 8px 12px;
-			border: 1px solid #ccc;
-			border-radius: 4px;
-			background-color: #f0f0f0;
-			cursor: pointer;
-			font-size: 14px;
-			text-align: center;
-			/* Keeps auto-width for this type of button, as it can have text/icon */
-			width: auto;
-			white-space: nowrap; /* Prevents line breaks in button text */
-		}
-
-		.control-btn:hover {
-			background-color: #e0e0e0;
-		}
-
-		/* Styling to place zoom buttons on the left side */
-		.controls-left {
-			position: absolute;
-			top: 60px; /* Adjust as needed to avoid covering the top overlay */
-			left: 10px;
-			display: flex;
-			flex-direction: column; /* Stacks buttons vertically */
-			gap: 5px; /* Space between buttons */
-			z-index: 10; /* Ensures buttons are above canvas/video */
-		}
-
-		/* Specific style for zoom buttons (now 5% smaller) */
-		.zoom-btn {
-			/* Original padding: 8px 5px; */
-			/* Original width: 35px; min-width: 35px; max-width: 35px; */
-
-			/* Reduced by 5% */
-			padding: 7.6px 4.75px; /* 8px * 0.95 = 7.6px, 5px * 0.95 = 4.75px */
-			border: 1px solid #ccc;
-			border-radius: 4px;
-			background-color: #f0f0f0;
-			cursor: pointer;
-			font-size: 13.3px; /* 14px * 0.95 = 13.3px */
-			text-align: center;
-			width: 33.25px; /* 35px * 0.95 = 33.25px */
-			min-width: 33.25px;
-			max-width: 33.25px;
-			box-sizing: border-box; /* Ensures padding and border are included in the width */
-			height: 33.25px; /* Setting height explicitly for consistency with width reduction */
-		}
-
-		.zoom-btn:hover {
-			background-color: #e0e0e0;
-		}
-	</style>
-  <div id="overlay">
-    <div id="ipaddress" class="overlay-info"></div>
-    <div id="appVersion" class="overlay-info"></div>
-    <div id="battery" class="overlay-info"></div>
-  </div>
-
-  <video id="video" autoplay playsinline></video>
-  <canvas id="canvas"></canvas>
-  <div id="status"></div>
-
-  <div id="controls">
-    <div id="connection-config">
-      <input type="text" id="serverIp" placeholder="192.168.1.42" class="compact-input" />
-      <input type="text" id="serverPort" placeholder="8181" value="8181" class="compact-input" />
-      <button id="saveConfigBtn" class="icon-button"><i class="fas fa-save"></i></button>
+    <div class="controls-left">
+        <button id="zoom8Btn" class="zoom-btn">x8</button>
+        <button id="zoom7Btn" class="zoom-btn">x7</button>
+        <button id="zoom6Btn" class="zoom-btn">x6</button>
+        <button id="zoom5Btn" class="zoom-btn">x5</button>
+        <button id="zoom4Btn" class="zoom-btn">x4</button>
+        <button id="zoom3Btn" class="zoom-btn">x3</button>
+        <button id="zoom2Btn" class="zoom2Btn">x2</button>
+        <button id="zoom1Btn" class="zoom-btn">x1</button>
     </div>
 
-    <div id="controls-container">
-      <select id="cameraSelect" class="compact-select"></select>
-      <select id="resolutionSelect" class="compact-select">
-        <option value="vga">640x480</option>
-        <option value="hd">1280x720</option>
-        <option value="fhd">1920x1080</option>
-      </select>
-      <select id="fpsSelect" class="compact-select">
-        <option value="5">5 FPS</option>
-        <option value="10" selected>10 FPS</option>
-        <option value="20">20 FPS</option>
-      </select>
-      <button id="startBtn" class="icon-text-button"><i class="fas fa-play"></i> Start</button>
-      <button id="stopBtn" class="icon-text-button"><i class="fas fa-stop"></i> Stop</button>
+    <video id="video" autoplay playsinline style="display:none;"></video>
+    <canvas id="canvas" style="display:block;"></canvas>
+
+    <div id="overlay">
+        <div id="ipaddress" class="overlay-info"></div>
+        <div id="appVersion" class="overlay-info"></div>
+        <div id="battery" class="overlay-info"></div>
     </div>
-  </div>
 
-  <script src="webcam.js"></script>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas"></canvas>
+    <div id="status"></div>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        // Register the service worker, ensuring the path is correct for GitHub Pages
-        navigator.serviceWorker.register('/webcam/sw.js') 
-          .then(registration => {
-            console.log('Service Worker registered! Scope:', registration.scope);
-          })
-          .catch(error => {
-            console.error('Service Worker registration failed:', error);
-          });
-      });
-    }
-  </script>
+    <div id="controls">
+        <div id="connection-config">
+            <input type="text" id="serverIp" placeholder="192.168.1.42" class="compact-input" />
+            <input type="text" id="serverPort" placeholder="8181" value="8181" class="compact-input" />
+            <button id="saveConfigBtn" class="icon-button"><i class="fas fa-save"></i></button>
+        </div>
+
+        <div id="controls-container">
+            <select id="cameraSelect" class="compact-select"></select>
+            <select id="resolutionSelect" class="compact-select">
+                <option value="vga">640x480</option>
+                <option value="hd">1280x720</option>
+                <option value="fhd">1920x1080</option>
+            </select>
+            <select id="fpsSelect" class="compact-select">
+                <option value="5">5 FPS</option>
+                <option value="10" selected>10 FPS</option>
+                <option value="20">20 FPS</option>
+            </select>
+            <button id="startBtn" class="icon-text-button"><i class="fas fa-play"></i> Start</button>
+            <button id="stopBtn" class="icon-text-button"><i class="fas fa-stop"></i> Stop</button>
+        </div>
+    </div>
+
+    <script src="webcam.js"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Register the service worker, ensuring the path is correct for GitHub Pages
+                navigator.serviceWorker.register('/webcam/sw.js') 
+                    .then(registration => {
+                        console.log('Service Worker registered! Scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.error('Service Worker registration failed:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>

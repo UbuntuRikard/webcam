@@ -1,132 +1,182 @@
+/* style.css */
 body {
-  margin: 0;
-  background: black;
-  color: white;
-  font-family: sans-serif;
+    margin: 0;
+    background: black;
+    color: white;
+    font-family: sans-serif;
 }
 
 video, #canvas {
-  max-width: 100%;
-  height: auto;
-  background: black;
-  margin-top: 30px; /* Pushes the video/canvas down from the top */
+    max-width: 100%;
+    height: auto;
+    background: black;
+    margin-top: 30px; /* Pushes the video/canvas down from the top */
 }
 
 #canvas {
-  display: none;
+    display: none;
 }
 
 #overlay {
-  position: absolute;
-  width: 100%;
-  pointer-events: none;
-  font-size: 10px; /* Text size for all overlay elements */
-  top: 5px;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 10px;
-  box-sizing: border-box;
+    position: absolute;
+    width: 100%;
+    pointer-events: none;
+    font-size: 10px; /* Text size for all overlay elements */
+    top: 5px;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    box-sizing: border-box;
 }
 
 #ipaddress,
-#appVersion, /* Apply styles to new version element */
+#appVersion,
 #battery {
-  position: static;
-  transform: none;
-  flex-shrink: 0;
-  white-space: nowrap; /* Ensures text stays on one line */
-  overflow: hidden; /* Hides overflowing text */
-  text-overflow: ellipsis; /* Adds ellipsis for truncated text */
+    position: static;
+    transform: none;
+    flex-shrink: 0;
+    white-space: nowrap; /* Ensures text stays on one line */
+    overflow: hidden; /* Hides overflowing text */
+    text-overflow: ellipsis; /* Adds ellipsis for truncated text */
 }
 
 #appVersion {
-  flex-grow: 1; /* Allows it to take available space */
-  text-align: center; /* Centers the version text */
+    flex-grow: 1; /* Allows it to take available space */
+    text-align: center; /* Centers the version text */
 }
 
 #status {
-  position: absolute;
-  top: 40%;
-  width: 100%;
-  text-align: center;
-  color: red;
-  font-weight: bold;
+    position: absolute;
+    top: 40%;
+    width: 100%;
+    text-align: center;
+    color: red;
+    font-weight: bold;
 }
 
 #controls {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 5px;
-  box-sizing: border-box;
-  gap: 5px;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 5px;
+    box-sizing: border-box;
+    gap: 5px;
 }
 
 #connection-config,
 #controls-container {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 5px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
 }
 
 input.compact-input,
 select.compact-select,
 button {
-  padding: 3px 6px;
-  font-size: 10px;
-  box-sizing: border-box;
-  height: 22px;
-  min-width: unset;
+    padding: 3px 6px;
+    font-size: 10px;
+    box-sizing: border-box;
+    height: 22px;
+    min-width: unset;
 }
 
 input.compact-input {
-  width: 90px;
+    width: 90px;
 }
 
 input.compact-input[id="serverPort"] {
-  width: 50px;
+    width: 50px;
 }
 
 .icon-button {
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
 }
 
 .icon-button i {
-  font-size: 14px;
+    font-size: 14px;
 }
 
 .icon-text-button {
-  display: flex;
-  align-items: center;
-  gap: 3px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
 }
 
 .icon-text-button i {
-  font-size: 12px;
+    font-size: 12px;
+}
+
+/* Styling to place zoom buttons on the left side */
+.controls-left {
+    position: absolute;
+    top: 60px; /* Adjust as needed to avoid covering the top overlay */
+    left: 10px;
+    display: flex;
+    flex-direction: column; /* Stacks buttons vertically */
+    gap: 5px; /* Space between buttons */
+    z-index: 10; /* Ensures buttons are above canvas/video */
+}
+
+/* General style for your common control buttons (like your Save Configuration) */
+.control-btn {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+    /* Keeps auto-width for this type of button, as it can have text/icon */
+    width: auto;
+    white-space: nowrap; /* Prevents line breaks in button text */
+}
+
+.control-btn:hover {
+    background-color: #e0e0e0;
+}
+
+/* Specific style for zoom buttons (now 5% smaller in height and width) */
+.zoom-btn {
+    padding: 7.6px 4.75px; /* 8px * 0.95 = 7.6px, 5px * 0.95 = 4.75px */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+    font-size: 13.3px; /* 14px * 0.95 = 13.3px */
+    text-align: center;
+    width: 33.25px; /* 35px * 0.95 = 33.25px */
+    min-width: 33.25px;
+    max-width: 33.25px;
+    box-sizing: border-box; /* Ensures padding and border are included in the width */
+    height: 33.25px; /* Setting height explicitly for 5% reduction */
+}
+
+.zoom-btn:hover {
+    background-color: #e0e0e0;
 }
 
 @media screen and (min-width: 600px) {
-  #controls {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
+    #controls {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
 
-  #connection-config {
-    order: 1;
-  }
+    #connection-config {
+        order: 1;
+    }
 
-  #controls-container {
-    order: 2;
-  }
+    #controls-container {
+        order: 2;
+    }
 }
