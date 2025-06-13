@@ -152,13 +152,13 @@ input.compact-input[id="serverPort"] {
     border-radius: 4px;
     background-color: #f0f0f0;
     cursor: pointer;
-    font-size: 13.3px; /* 14px * 0.95 = 13.3px */
+    font-size: 12px; /* 14px * 0.95 = 13.3px */
     text-align: center;
-    width: 33.25px; /* 35px * 0.95 = 33.25px */
-    min-width: 33.25px;
-    max-width: 33.25px;
+    width: 30px; /* 35px * 0.95 = 33.25px */
+    min-width: 28px;
+    max-width: 28px;
     box-sizing: border-box; /* Ensures padding and border are included in the width */
-    height: 33.25px; /* Setting height explicitly for 5% reduction */
+    height: 28px; /* Setting height explicitly for 5% reduction */
 }
 
 .zoom-btn:hover {
