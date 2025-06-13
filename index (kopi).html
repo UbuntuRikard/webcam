@@ -10,15 +10,15 @@
 </head>
 <body>
 	<div class="controls-left">
-		<button id="zoom8Btn" class="zoom-btn">x8</button>
-		<button id="zoom7Btn" class="zoom-btn">x7</button>
-		<button id="zoom6Btn" class="zoom-btn">x6</button>
 		<button id="zoom5Btn" class="zoom-btn">x5</button>
 		<button id="zoom4Btn" class="zoom-btn">x4</button>
 		<button id="zoom3Btn" class="zoom-btn">x3</button>
 		<button id="zoom2Btn" class="zoom-btn">x2</button>
 		<button id="zoom1Btn" class="zoom-btn">x1</button>
 	</div>
+
+	<video id="video" autoplay playsinline style="display:none;"></video>
+	<canvas id="canvas" style="display:block;"></canvas>
 
 	<style>
 		/* Generel stil for dine almindelige kontrolknapper (som din Gem Konfiguration) */
@@ -30,44 +30,40 @@
 			cursor: pointer;
 			font-size: 14px;
 			text-align: center;
-			/* Keeps auto-width for this type of button, as it can have text/icon */
+			/* Beholder auto-bredde for denne type knap, da den kan have tekst/ikon */
 			width: auto;
-			white-space: nowrap; /* Prevents line breaks in button text */
+			white-space: nowrap; /* Undgå linjeskift i knaptekst */
 		}
 
 		.control-btn:hover {
 			background-color: #e0e0e0;
 		}
 
-		/* Styling to place zoom buttons on the left side */
+		/* Styling for at placere zoom-knapper i venstre side */
 		.controls-left {
 			position: absolute;
-			top: 60px; /* Adjust as needed to avoid covering the top overlay */
+			top: 60px; /* Juster efter behov for at undgå at dække top-overlay */
 			left: 10px;
 			display: flex;
-			flex-direction: column; /* Stacks buttons vertically */
-			gap: 5px; /* Space between buttons */
-			z-index: 10; /* Ensures buttons are above canvas/video */
+			flex-direction: column; /* Stabler knapper vertikalt */
+			gap: 5px; /* Plads mellem knapper */
+			z-index: 10; /* Sørg for at knapperne er over canvas/video */
 		}
 
-		/* Specific style for zoom buttons (now 5% smaller) */
+		/* Specifik stil for zoom-knapperne */
 		.zoom-btn {
-			/* Original padding: 8px 5px; */
-			/* Original width: 35px; min-width: 35px; max-width: 35px; */
-
-			/* Reduced by 5% */
-			padding: 7.6px 4.75px; /* 8px * 0.95 = 7.6px, 5px * 0.95 = 4.75px */
+			padding: 8px 5px; /* Mindre padding for at gøre dem smallere */
 			border: 1px solid #ccc;
 			border-radius: 4px;
 			background-color: #f0f0f0;
 			cursor: pointer;
-			font-size: 13.3px; /* 14px * 0.95 = 13.3px */
+			font-size: 14px;
 			text-align: center;
-			width: 33.25px; /* 35px * 0.95 = 33.25px */
-			min-width: 33.25px;
-			max-width: 33.25px;
-			box-sizing: border-box; /* Ensures padding and border are included in the width */
-			height: 33.25px; /* Setting height explicitly for consistency with width reduction */
+			/* Gør dem smallere - ca. bredden af to tegn */
+			width: 35px; /* Juster dette tal for at få den præcise bredde du ønsker */
+			min-width: 35px; /* Sørg for at den ikke bliver mindre */
+			max-width: 35px; /* Sørg for at den ikke bliver større */
+			box-sizing: border-box; /* Sørg for at padding og border er inkluderet i bredden */
 		}
 
 		.zoom-btn:hover {
