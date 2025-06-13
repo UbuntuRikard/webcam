@@ -32,6 +32,9 @@ let sendInterval = null;
 let ws = null;
 let appVersion = "V. 0.1.0.0";
 
+// --- Screen Wake Lock State ---
+let wakeLock = null; // Variable to hold the wake lock object
+
 // --- Zoom State ---
 let currentZoomLevel = 1; // Default to x1 (no zoom)
 
@@ -106,6 +109,40 @@ function updateOverlayInfo() {
 }
 setInterval(updateOverlayInfo, 1000);
 updateOverlayInfo();
+
+// === SCREEN WAKE LOCK FUNCTIONS ===
+async function requestWakeLock() {
+    if ('wakeLock' in navigator) {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Screen Wake Lock acquired!');
+            statusText.textContent = "🟢 Streaming started (Screen Locked)"; // Update status text
+            wakeLock.addEventListener('release', () => {
+                console.log('Screen Wake Lock released!');
+                // This event fires if the lock is released by the system or another action
+                // You might want to update the status text here if the stream is still running
+                if (stream && ws && ws.readyState === WebSocket.OPEN) {
+                    statusText.textContent = "🟢 Streaming active (Screen Lock Released)";
+                }
+            });
+        } catch (err) {
+            // The user has denied the wake lock request or it failed for another reason
+            console.error('Failed to acquire Screen Wake Lock:', err);
+            statusText.textContent = "🔴 Screen Lock Denied/Failed";
+        }
+    } else {
+        console.warn('Wake Lock API not supported by this browser.');
+        statusText.textContent = "🟢 Streaming started (No Screen Lock)"; // Inform if not supported
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock) {
+        wakeLock.release();
+        wakeLock = null;
+        console.log('Screen Wake Lock released.');
+    }
+}
 
 // === CAMERA & STREAM HANDLING ===
 
@@ -228,6 +265,7 @@ async function startCamera() {
         stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
 
         console.log("Camera stream obtained successfully.");
+        // Status text will be updated by requestWakeLock if successful
         statusText.textContent = "🟢 Camera started, connecting...";
 
         video.srcObject = stream;
@@ -248,6 +286,7 @@ async function startCamera() {
         canvas.style.display = "block";
 
         startSendingFrames();
+        requestWakeLock(); // Request wake lock after stream successfully starts
 
     } catch (error) {
         console.error("Error starting camera:", error);
@@ -285,6 +324,7 @@ function stopCamera() {
         ws = null;
     }
     clearInterval(sendInterval);
+    releaseWakeLock(); // Release wake lock when stopping the camera
     statusText.textContent = "⚪ Streaming stopped";
 }
 
@@ -302,7 +342,10 @@ function startSendingFrames() {
     ws = new WebSocket(`wss://${ip}:${port}`); 
 
     ws.onopen = () => {
-        statusText.textContent = "🔵 Streaming started";
+        // Status text is now primarily handled by requestWakeLock, but we'll ensure it's set if no wake lock is acquired
+        if (!wakeLock) { // Only update if wake lock wasn't successful or supported
+            statusText.textContent = "🔵 Streaming started";
+        }
         sendInterval = setInterval(() => {
             // Get actual video dimensions of the stream received from the camera.
             // This will be the highest possible resolution (e.g., 4608x2592).
@@ -354,6 +397,8 @@ function startSendingFrames() {
     ws.onclose = () => {
         statusText.textContent = "⚪ Streaming stopped"; 
         clearInterval(sendInterval);
+        // Do NOT release wake lock here, as it might be released by system.
+        // It's already handled in stopCamera.
     };
 }
 
