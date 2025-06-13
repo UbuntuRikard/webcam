@@ -158,7 +158,7 @@ input.compact-input[id="serverPort"] {
     min-width: 28px;
     max-width: 28px;
     box-sizing: border-box; /* Ensures padding and border are included in the width */
-    height: 28px; /* Setting height explicitly for 5% reduction */
+    height: 24px; /* Setting height explicitly for 5% reduction */
 }
 
 .zoom-btn:hover {
