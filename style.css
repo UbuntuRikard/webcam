@@ -1,4 +1,3 @@
-/* style.css */
 /*
 This file is part of Webcam App - Made by:
 Copyright (C) 2025 Rikard Svenningsen
@@ -14,186 +13,259 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
+along with this program. If not, see <https://www.org/licenses/>.
 */
-body {
-    margin: 0;
-    background: black;
-    color: white;
-    font-family: sans-serif;
+
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --border-color: #ddd;
+    --bg-color: #f0f0f0;
+    --card-bg-color: #fff;
+    --text-color: #333;
+    --status-ready: #555;
+    --status-starting: #ffc107; /* Yellow */
+    --status-streaming: #28a745; /* Green */
+    --status-error: #dc3545; /* Red */
+    --status-stopped: #6c757d; /* Grey */
 }
 
-video, #canvas {
-    max-width: 100%;
-    height: auto;
-    background: black;
-    margin-top: 30px; /* Pushes the video/canvas down from the top */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    background-color: var(--bg-color);
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+    color: var(--text-color);
+}
+
+.container {
+    background-color: var(--card-bg-color);
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    text-align: center;
+    width: 100%;
+    max-width: 700px; /* Increased max-width slightly for better layout */
+    box-sizing: border-box;
+}
+
+h1 {
+    color: var(--primary-color);
+    margin-bottom: 25px;
+    font-size: 2em;
+}
+
+#video {
+    display: none; /* Keep hidden as canvas is used */
 }
 
 #canvas {
-    display: none;
-}
-
-#overlay {
-    position: absolute;
     width: 100%;
-    pointer-events: none;
-    font-size: 10px; /* Text size for all overlay elements */
-    top: 5px;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 10px;
-    box-sizing: border-box;
-}
-
-#ipaddress,
-#appVersion,
-#battery {
-    position: static;
-    transform: none;
-    flex-shrink: 0;
-    white-space: nowrap; /* Ensures text stays on one line */
-    overflow: hidden; /* Hides overflowing text */
-    text-overflow: ellipsis; /* Adds ellipsis for truncated text */
-}
-
-#appVersion {
-    flex-grow: 1; /* Allows it to take available space */
-    text-align: center; /* Centers the version text */
+    max-width: 100%;
+    height: auto;
+    /* Maintain aspect ratio. Set a fallback like 16/9 if not explicitly set by JS */
+    aspect-ratio: 16 / 9; 
+    border: 1px solid var(--border-color);
+    background-color: black;
+    display: block;
+    margin: 20px auto;
+    border-radius: 4px;
 }
 
 #status {
-    position: absolute;
-    top: 40%;
-    width: 100%;
-    text-align: center;
-    color: red;
+    margin: 15px 0 25px; /* Adjust margin for better spacing */
     font-weight: bold;
+    color: var(--status-ready); /* Default status color */
 }
 
-#controls {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
+/* Specific status colors from webcam.js logs */
+#status[data-status="starting"] { color: var(--status-starting); }
+#status[data-status="streaming"] { color: var(--status-streaming); }
+#status[data-status="error"] { color: var(--status-error); }
+#status[data-status="stopped"] { color: var(--status-stopped); }
+
+
+/* --- Controls Layout --- */
+.controls {
     display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    background: rgba(0, 0, 0, 0.7);
-    padding: 5px;
-    box-sizing: border-box;
-    gap: 5px;
+    flex-direction: column; /* Stack control rows vertically */
+    gap: 15px; /* Space between each row of controls */
 }
 
-#connection-config,
-#controls-container {
+.control-row {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 5px;
-}
-
-input.compact-input,
-select.compact-select,
-button {
-    padding: 3px 6px;
-    font-size: 10px;
-    box-sizing: border-box;
-    height: 22px;
-    min-width: unset;
-}
-
-input.compact-input {
-    width: 90px;
-}
-
-input.compact-input[id="serverPort"] {
-    width: 50px;
-}
-
-.icon-button {
-    width: 22px;
-    height: 22px;
-    display: flex;
+    flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+    gap: 10px; /* Space between items within a row */
     align-items: center;
-    justify-content: center;
-    padding: 0;
+    justify-content: center; /* Center items horizontally */
 }
 
-.icon-button i {
-    font-size: 14px;
+/* Styles for all form elements and buttons */
+.control-row label,
+.control-row input[type="text"],
+.control-row input[type="number"],
+.control-row select,
+.action-button {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 0.95em;
+    flex-grow: 1; /* Allow items to grow to fill space */
+    min-width: 80px; /* Minimum width for inputs/selects */
 }
 
-.icon-text-button {
-    display: flex;
-    align-items: center;
-    gap: 3px;
+.control-row input,
+.control-row select {
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
 }
 
-.icon-text-button i {
-    font-size: 12px;
+.action-button {
+    cursor: pointer;
+    border: none;
+    font-size: 1em;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    white-space: nowrap; /* Prevent button text from wrapping */
 }
 
-/* Styling to place zoom buttons on the left side */
-.controls-left {
+.action-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.action-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.action-button:disabled {
+    background-color: #cccccc !important;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.action-button.primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.action-button.primary:hover:not(:disabled) {
+    background-color: #0056b3;
+}
+
+.action-button.secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.action-button.secondary:hover:not(:disabled) {
+    background-color: #5a6268;
+}
+
+/* Specific adjustments for rows */
+.action-row {
+    display: flex; /* Ensure it's a flex container */
+    flex-wrap: wrap; /* Allow wrapping */
+    justify-content: center; /* Center buttons */
+    gap: 10px; /* Space between buttons */
+}
+
+.zoom-display {
+    padding: 10px;
+    background-color: #e9ecef;
+    border-radius: 4px;
+    white-space: nowrap;
+    text-align: center;
+    font-weight: bold;
+    color: #495057;
+}
+
+/* Make camera select full width */
+.full-width-select {
+    width: 100% !important;
+    flex-basis: 100%; /* Force it to take full width of its row */
+}
+
+/* Adjustments for inputs in the IP/Port row */
+.control-row input[type="text"],
+.control-row input[type="number"] {
+    flex: 1 1 45%; /* Allow inputs to share space roughly equally */
+}
+
+/* Accessibility: Hide labels visually but keep for screen readers */
+.sr-only {
     position: absolute;
-    top: 60px; /* Adjust as needed to avoid covering the top overlay */
-    left: 10px;
-    display: flex;
-    flex-direction: column; /* Stacks buttons vertically */
-    gap: 5px; /* Space between buttons */
-    z-index: 10; /* Ensures buttons are above canvas/video */
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
-/* General style for your common control buttons (like your Save Configuration) */
-.control-btn {
-    padding: 8px 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background-color: #f0f0f0;
-    cursor: pointer;
-    font-size: 14px;
-    text-align: center;
-    /* Keeps auto-width for this type of button, as it can have text/icon */
-    width: auto;
-    white-space: nowrap; /* Prevents line breaks in button text */
-}
 
-.control-btn:hover {
-    background-color: #e0e0e0;
-}
-
-/* Specific style for zoom buttons (now 5% smaller in height and width) */
-.zoom-btn {
-    padding: 7.6px 4.75px; /* 8px * 0.95 = 7.6px, 5px * 0.95 = 4.75px */
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background-color: #f0f0f0;
-    cursor: pointer;
-    font-size: 12px; /* 14px * 0.95 = 13.3px */
-    text-align: center;
-    width: 30px; /* 35px * 0.95 = 33.25px */
-    min-width: 28px;
-    max-width: 28px;
-    box-sizing: border-box; /* Ensures padding and border are included in the width */
-    height: 24px; /* Setting height explicitly for 5% reduction */
-}
-
-.zoom-btn:hover {
-    background-color: #e0e0e0;
-}
-
-@media screen and (min-width: 600px) {
-    #controls {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+        max-width: 95%;
     }
 
-    #connection-config {
-        order: 1;
+    h1 {
+        font-size: 1.8em;
     }
 
-    #controls-container {
-        order: 2;
+    .control-row {
+        flex-direction: row; /* Keep elements in a row for mobile, but allow wrapping */
+        justify-content: space-around; /* Distribute items evenly */
+    }
+
+    .control-row label,
+    .control-row input,
+    .control-row select,
+    .action-button {
+        flex-basis: auto; /* Let items decide their own width */
+        width: auto; /* Remove explicit width */
+        min-width: unset; /* Remove min-width */
+    }
+
+    /* Adjust specific elements for smaller screens */
+    .action-row .action-button {
+        flex: 1 1 auto; /* Allow buttons to wrap and take available width */
+    }
+
+    .zoom-display {
+        flex-basis: 100%; /* Make zoom display take full width if it wraps */
+        margin-bottom: 10px; /* Add some space below it */
+    }
+}
+
+@media (max-width: 480px) {
+    .container {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 1.5em;
+    }
+    
+    .control-row {
+        flex-direction: column; /* Stack elements vertically on very small screens */
+        align-items: stretch; /* Stretch items to fill width */
+    }
+
+    .control-row label,
+    .control-row input,
+    .control-row select,
+    .action-button,
+    .zoom-display {
+        width: 100%; /* Make all items full width */
+        margin: 5px 0; /* Adjust vertical margin */
     }
 }
