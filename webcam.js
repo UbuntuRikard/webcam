@@ -37,12 +37,18 @@ const currentZoomDisplay = document.getElementById("currentZoomDisplay");
 let stream = null; // Stream fra kameraet
 let ws = null;     // WebSocket forbindelse
 let mediaRecorder = null; // MediaRecorder instance
-let appVersion = "V. 0.1.0.0"; // App version
+let appVersion = "Ukendt Version"; // App version, vil blive opdateret fra manifest.json
 let wakeLock = null; // Skærmlås
 let currentZoomLevel = 1.0; // Aktuel zoomniveau
 const ZOOM_STEP = 1; // Hvor meget zoom ændres pr. klik
 const MAX_ZOOM = 8.0; // Maksimum digital zoom
 const MIN_ZOOM = 1.0; // Minimum digital zoom
+
+// --- KONFIGURATIONSVÆRDIER ---
+// Juster denne bitrate for at påvirke videokvalitet vs. båndbredde/strømforbrug.
+// Højere værdi = bedre kvalitet, mere båndbredde, højere strømforbrug.
+// Standard 2 Mbps (2.000.000 bits per sekund) er et godt udgangspunkt for HD.
+const VIDEO_BITRATE_BPS = 2_000_000; // 2 Megabit per sekund
 
 // Overlays data (dynamiske informationer)
 let overlayData = {
@@ -56,6 +62,7 @@ let overlayData = {
 document.addEventListener("DOMContentLoaded", async () => {
     loadConfig();
     await populateCameraList();
+    await getAppVersionFromManifest(); // Hent app-version tidligt
     updateButtonStates();
     updateOverlayInfo(); // Initial opdatering af overlays
 
@@ -99,6 +106,24 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 // --- Hjælpefunktioner ---
+
+// Funktion til at hente app-versionen fra manifest.json
+async function getAppVersionFromManifest() {
+    try {
+        const response = await fetch('manifest.json'); // Stien er relativ til roden af din PWA
+        if (response.ok) {
+            const manifest = await response.json();
+            if (manifest.version) {
+                appVersion = `V. ${manifest.version}`; // Sæt den globale appVersion variabel
+                console.log("App version fra manifest:", appVersion);
+            }
+        }
+    } catch (e) {
+        console.error('Fejl ved hentning af app version fra manifest.json:', e);
+        // appVersion forbliver "Ukendt Version"
+    }
+}
+
 function saveConfig() {
     localStorage.setItem("streamServerIp", ipInput.value);
     localStorage.setItem("streamServerPort", portInput.value);
@@ -313,36 +338,58 @@ async function startSendingVideoFrames() {
 
     const fps = parseInt(fpsSelect.value, 10);
     // Interval for MediaRecorder data (hvor ofte blobs skal sendes)
-    // En mindre værdi (f.eks. 500ms eller 1000ms) kan give jævnere streaming,
-    // men hyppigere WebSocket-beskeder. Juster efter behov.
-    // Her sender vi en blob for hver frame, hvis muligt.
+    // Send en blob for hver frame, hvis muligt.
     const mediaRecorderDataInterval = 1000 / fps; 
 
-    ws = new WebSocket(`wss://${ip}:${port}`);
+    ws = new WebSocket(`wss://${ip}:${port}/ws`); // Vigtigt: Sørg for at stien matcher serverens rute (/ws)
 
     ws.onopen = () => {
         if (!wakeLock) {
             statusText.textContent = "🔵 Streaming startet";
         }
         
+        // Bestil de foretrukne MIME-typer og codecs
+        const preferredMimeTypes = [
+            'video/mp4;codecs=avc1', // H.264 for bred kompatibilitet i browsere (Chrome/Safari)
+            'video/webm;codecs=vp8', // Standard WebM/VP8
+            'video/webm;codecs=vp9'  // Bedre kvalitet WebM/VP9 (hvis understøttet)
+        ];
+
+        let mimeTypeToUse = '';
+        for (const type of preferredMimeTypes) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                mimeTypeToUse = type;
+                break;
+            }
+        }
+
+        if (!mimeTypeToUse) {
+            alert("FEJL: Din browser understøtter ingen af de foretrukne videoformater (H.264, VP8, VP9) for streaming.");
+            stopCamera();
+            return;
+        }
+
+        // --- NYT: Send valgte MIME type til serveren ---
+        // Serveren forventer denne besked først for at konfigurere FFmpeg input
+        ws.send(JSON.stringify({ type: "init", mimeType: mimeTypeToUse }));
+        console.log(`Sending init message to server with mimeType: ${mimeTypeToUse}`);
+
+
         // Lav en MediaStream fra canvas'et
         // Dette fanger indholdet af canvas'et som en videostrøm
         const canvasStream = canvas.captureStream(fps); // FPS for den stream, vi fanger fra canvas
 
         try {
-            // Prøv at bruge en WebM-container med VP8/VP9 codec for god komprimering
-            // Tjek understøttede codecs i browseren: MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-            mediaRecorder = new MediaRecorder(canvasStream, { mimeType: 'video/webm;codecs=vp8' });
+            mediaRecorder = new MediaRecorder(canvasStream, { 
+                mimeType: mimeTypeToUse,
+                bitsPerSecond: VIDEO_BITRATE_BPS // Anvend den konfigurerede bitrate
+            });
+            console.log(`MediaRecorder oprettet med mimeType: ${mimeTypeToUse} og bitrate: ${VIDEO_BITRATE_BPS} bps`);
         } catch (e) {
-            console.error('Kunne ikke oprette MediaRecorder med specifik mimeType. Prøver standard.', e);
-            try {
-                mediaRecorder = new MediaRecorder(canvasStream); // Forsøg med standard-type
-            } catch (e2) {
-                console.error('Kunne ikke oprette MediaRecorder overhovedet.', e2);
-                alert("FEJL: Din browser understøtter ikke MediaStream Recording API'et til videostreaming, eller der er en anden fejl.");
-                stopCamera(); // Stop det hele, hvis vi ikke kan streame
-                return;
-            }
+            console.error('Kunne ikke oprette MediaRecorder med specificeret mimeType og bitrate.', e);
+            alert("FEJL: Din browser understøtter ikke MediaStream Recording API'et til videostreaming med den valgte konfiguration, eller der er en anden fejl.");
+            stopCamera(); // Stop det hele, hvis vi ikke kan streame
+            return;
         }
 
         mediaRecorder.ondataavailable = (event) => {
@@ -429,7 +476,7 @@ function drawFrame() {
 
     // Info for overlay
     const overlayLines = [
-        `App: ${appVersion}`,
+        `App: ${appVersion}`, // Nu dynamisk fra manifest.json
         `Server: ${ipInput.value}:${portInput.value}`,
         `Output: ${currentResolution} @ ${currentFps} FPS`,
         `Zoom: x${currentZoomLevel.toFixed(1)}`,
@@ -440,7 +487,7 @@ function drawFrame() {
     let yOffset = 10;
     for (const line of overlayLines) {
         ctx.strokeText(line, 10, yOffset); // Sort omrids
-        ctx.fillText(line, 10, yOffset);   // Hvid tekst
+        ctx.fillText(line, 10, yOffset);  // Hvid tekst
         yOffset += 25; // Linjehøjde
     }
 
