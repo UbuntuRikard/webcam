@@ -5,78 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Webcam Streamer</title>
     <link rel="stylesheet" href="style.css">
-    <!-- STI KORREKTION: Brug relativ sti til manifest.json -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#000000"/> 
+    <meta name="theme-color" content="#000000"/>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Webcam Streamer">
-    <!-- STI KORREKTION: Brug relative stier til ikoner -->
-    <link rel="apple-touch-icon" href="freepik_camera_192x192.png"> 
-    <link rel="apple-touch-icon" sizes="512x512" href="freepik_camera_512x512.png"> 
+    <link rel="apple-touch-icon" href="freepik_camera_192x192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="freepik_camera_512x512.png">
 </head>
 <body>
-    <div class="container">
-        <h1>Webcam Streamer</h1>
-        
+    <div class="main-wrapper">
         <video id="video" autoplay playsinline muted style="display: none;"></video>
-        
-        <canvas id="canvas"></canvas>
 
-        <p id="status">Status: Klar</p>
+        <div class="visual-area">
+            <canvas id="canvas"></canvas>
+            <p id="status" class="overlay-status">Status: Klar</p> <div class="controls overlay-controls">
+                <div class="control-row top-action-row">
+                    <button id="zoomOut" class="action-button zoom-button">-</button>
+                    <span id="currentZoomDisplay" class="zoom-display">x1.0</span>
+                    <button id="zoomIn" class="action-button zoom-button">+</button>
+                    <button id="resetZoom" class="action-button">0 Z</button>
+                    <button id="startButton" class="action-button primary">▶</button>
+                    <button id="stopButton" class="action-button secondary" disabled>◼</button>
+                </div>
 
-        <div class="controls">
-            <div class="control-row action-row">
-                <button id="zoomOut" class="action-button">- Zoom</button>
-                <span id="currentZoomDisplay" class="zoom-display">Zoom: x1.0</span>
-                <button id="zoomIn" class="action-button">+ Zoom</button>
-                <button id="resetZoom" class="action-button">Reset Zoom</button>
-                <button id="startButton" class="action-button primary">Start</button>
-                <button id="stopButton" class="action-button secondary" disabled>Stop</button>
-            </div>
+                <div class="control-row inline-settings">
+                    <label for="cameraSelect" class="sr-only">Vælg Kamera:</label>
+                    <select id="cameraSelect" class="small-select"></select>
 
-            <!-- RÆKKE FOR LOG KNAPPER -->
-            <div class="control-row action-row" style="margin-top: 15px;">
-                <button id="downloadLogsButton" class="action-button primary">Download Log</button>
-                <button id="clearLogsButton" class="action-button secondary">Ryd Logs</button>
-            </div>
-            <!-------------------------->
-            <!-- NY RÆKKE FOR SKÆRMKONTROL -->
-            <div class="control-row action-row" style="margin-top: 15px;">
-                <button id="toggleScreenLockButton" class="action-button primary">Skærm: Tændt</button>
-            </div>
-            <!-------------------------->
+                    <label for="resolutionSelect" class="sr-only">Opløsning:</label>
+                    <select id="resolutionSelect" class="small-select">
+                        <option value="vga">VGA</option>
+                        <option value="hd">HD</option>
+                        <option value="fhd">FHD</option>
+                    </select>
 
-            <div class="control-row">
-                <label for="cameraSelect" class="sr-only">Vælg Kamera:</label>
-                <select id="cameraSelect" class="full-width-select"></select>
-            </div>
+                    <label for="fpsSelect" class="sr-only">FPS:</label>
+                    <select id="fpsSelect" class="small-select">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="15">15</option>
+                        <option value="20">20</option>
+                        <option value="25">25</option>
+                        <option value="30">30</option>
+                    </select>
+                </div>
 
-            <div class="control-row">
-                <label for="resolutionSelect" class="sr-only">Opløsning:</label>
-                <select id="resolutionSelect">
-                    <option value="vga">VGA (640x480)</option>
-                    <option value="hd">HD (1280x720)</option>
-                    <option value="fhd">FHD (1920x1080)</option>
-                </select>
+                <div class="control-row bottom-settings">
+                    <label for="ipInput" class="sr-only">Server IP:</label>
+                    <input type="text" id="ipInput" value="192.168.1.100" placeholder="f.eks. 192.168.1.100" class="ip-input">
 
-                <label for="fpsSelect" class="sr-only">FPS:</label>
-                <select id="fpsSelect">
-                    <option value="5">5 FPS</option>
-                    <option value="10" selected>10 FPS</option>
-                    <option value="15">15 FPS</option>
-                    <option value="20">20 FPS</option>
-                    <option value="25">25 FPS</option>
-                    <option value="30">30 FPS</option>
-                </select>
-            </div>
+                    <label for="portInput" class="sr-only">Port:</label>
+                    <input type="number" id="portInput" value="8181" placeholder="f.eks. 8181" class="port-input">
 
-            <div class="control-row">
-                <label for="ipInput" class="sr-only">Server IP:</label>
-                <input type="text" id="ipInput" value="192.168.1.100" placeholder="f.eks. 192.168.1.100">
+                    <button id="toggleScreenLockButton" class="action-button primary screen-lock-button">Skærm: Tændt</button>
+                </div>
 
-                <label for="portInput" class="sr-only">Port:</label>
-                <input type="number" id="portInput" value="8181" placeholder="f.eks. 8181">
+                <div class="control-row log-buttons">
+                    <button id="downloadLogsButton" class="action-button primary">Download Log</button>
+                    <button id="clearLogsButton" class="action-button secondary">Ryd Logs</button>
+                </div>
+
             </div>
         </div>
     </div>
@@ -85,10 +74,7 @@
     <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // STI KORREKTION: Brug relativ sti 'sw.js' og eksplicit scope './'
-        // Dette fungerer typisk bedst for GitHub Pages-projektmapper,
-        // da det registrerer Service Worker'en for den aktuelle mappe.
-        navigator.serviceWorker.register('sw.js', { scope: './' }) 
+        navigator.serviceWorker.register('sw.js', { scope: './' })
           .then(registration => {
             console.log('Service Worker registreret med scope:', registration.scope);
           })
