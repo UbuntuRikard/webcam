@@ -1,24 +1,23 @@
 // sw.js
 
-// IMPORTANT: Adjust GITHUB_PAGES_BASE_PATH if your GitHub repository name changes
-// This should be the path to your repository if it's a project page (e.g., /your-repo-name/)
-// If it's a user/organization page (e.g., username.github.io), it should be '/'
-const GITHUB_PAGES_BASE_PATH = '/webcam/'; 
+// Dynamisk bestemmelse af base path for GitHub Pages-projektmapper.
+// Dette vil være '/din-repo-navn/' for projektmapper, eller '/' for organisationssider.
+// Det er afgørende for korrekte stier i cache.
+const GITHUB_PAGES_BASE_PATH = self.location.pathname.substring(0, self.location.pathname.lastIndexOf('/') + 1);
+console.log('Service Worker: GITHUB_PAGES_BASE_PATH sat til:', GITHUB_PAGES_BASE_PATH);
 
-// Define all core assets to cache. Paths must be relative to the GitHub Pages site root.
-// If you add or remove files that your PWA needs offline, you must update this list.
+// Definer alle kerne-aktiver, der skal caches. Stier skal være relative til GITHUB_PAGES_BASE_PATH.
 const urlsToCache = [
     GITHUB_PAGES_BASE_PATH + 'index.html',
     GITHUB_PAGES_BASE_PATH + 'style.css',
     GITHUB_PAGES_BASE_PATH + 'webcam.js',
-    GITHUB_PAGES_BASE_PATH + 'manifest.json', // Manifesten skal også caches!
+    GITHUB_PAGES_BASE_PATH + 'manifest.json',
     GITHUB_PAGES_BASE_PATH + 'offline.html', 
-    // Eksterne ressourcer som Font Awesome CDN skal også inkluderes, hvis de skal caches
+    // Eksterne ressourcer skal have deres fulde URL
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css',
-    // PWA ikoner (juster stier, hvis de ligger i en anden undermappe)
+    // PWA ikoner - brug GITHUB_PAGES_BASE_PATH for at matche den relative hosting
     GITHUB_PAGES_BASE_PATH + 'freepik_camera_192x192.png',
     GITHUB_PAGES_BASE_PATH + 'freepik_camera_512x512.png'
-    // Tilføj alle andre essentielle aktiver her (f.eks. andre billeder, yderligere JS-filer)
 ];
 
 // --- HJÆLPEFUNKTION: Henter cache-navnet fra manifest.json ---
@@ -26,6 +25,7 @@ const urlsToCache = [
 async function getCurrentCacheName() {
     let appVersion = 'unknown'; // Standardværdi hvis manifest.json ikke kan hentes
     try {
+        // Bruger GITHUB_PAGES_BASE_PATH for at hente manifestet korrekt
         const response = await fetch(GITHUB_PAGES_BASE_PATH + 'manifest.json');
         if (response.ok) {
             const manifest = await response.json();
@@ -34,7 +34,7 @@ async function getCurrentCacheName() {
             }
         }
     } catch (e) {
-        console.warn('Service Worker: Kunne ikke hente manifest.json for version, bruger "unknown".', e);
+        console.warn('Service Worker: Kunne ikke hente manifest.json for version, bruger "unknown". Fejl:', e);
     }
     // Returner cache-navnet baseret på versionen fra manifest.json
     return `webcam-streamer-cache-v${appVersion}`;
@@ -50,7 +50,6 @@ self.addEventListener('install', (event) => {
             console.log('Service Worker: Cacher aktiver for', currentCacheName);
             return caches.open(currentCacheName)
                 .then((cache) => {
-                    // Tilføj alle foruddefinerede URL'er til den aktuelle cache-version
                     return cache.addAll(urlsToCache);
                 })
                 .then(() => {
@@ -102,33 +101,26 @@ self.addEventListener('fetch', (event) => {
 
     // Spring caching over for eksterne ressourcer, der ikke eksplicit er angivet (f.eks. dynamiske API'er).
     // Eller hvis forespørgslen er til en chrome-extension:// URL osv.
-    if (requestUrl.origin !== location.origin && !urlsToCache.includes(event.request.url)) {
-        // Hent disse direkte fra netværket.
+    // Tjek også om det er en specifik request, der ikke skal caches (f.eks. WebSocket-opgraderinger).
+    if (requestUrl.origin !== location.origin && !urlsToCache.includes(event.request.url) || event.request.url.includes('/ws')) {
         return event.respondWith(fetch(event.request));
     }
 
     // Hovedcachingstrategi: Cache Først, derefter Netværk, derefter Fallback for navigationsforespørgsler.
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
-            // Hvis forespørgslen findes i cachen, serves den med det samme.
             if (cachedResponse) {
                 // console.log('Service Worker: Serverer fra cache:', event.request.url);
                 return cachedResponse;
             }
 
-            // Hvis ikke i cache, prøv at hente fra netværket.
             // console.log('Service Worker: Henter fra netværk:', event.request.url);
             return fetch(event.request)
                 .then((response) => {
-                    // Tjek om vi modtog et gyldigt svar, der kan caches.
-                    // status 200 er OK, type 'basic' betyder typisk same-origin forespørgsel.
                     if (response && response.status === 200 && response.type === 'basic') {
-                        // Klon svaret, fordi det er en stream og kun kan forbruges én gang.
                         const responseToCache = response.clone();
-                        // Hent dynamisk cache-navn her også for at gemme i den korrekte cache
                         getCurrentCacheName().then(currentCacheName => {
                              caches.open(currentCacheName).then((cache) => {
-                                 // Læg det nye svar ind i den aktuelle cache.
                                  cache.put(event.request, responseToCache); 
                              });
                         });
@@ -142,8 +134,6 @@ self.addEventListener('fetch', (event) => {
                         console.log('Service Worker: Netværk fejlede for navigation, serverer offline-side.');
                         return caches.match(GITHUB_PAGES_BASE_PATH + 'offline.html');
                     }
-                    // For andre typer af forespørgsler (billeder, scripts osv.), hvis ikke i cache og netværk fejler,
-                    // vil vi returnere et generisk "service utilgængelig" svar.
                     return new Response(null, { status: 503, statusText: 'Service Utilgængelig' });
                 });
         })
@@ -160,16 +150,14 @@ self.addEventListener('message', (event) => {
         event.waitUntil(
             caches.keys().then(cacheNames => {
                 return Promise.all(
-                    // Filtrer for caches, der tilhører vores app
                     cacheNames.filter(name => name.startsWith('webcam-streamer-'))
-                                     .map(name => {
-                                         console.log(`Service Worker: Rydder cache: ${name}`);
-                                         return caches.delete(name);
-                                     })
+                                        .map(name => {
+                                            console.log(`Service Worker: Rydder cache: ${name}`);
+                                            return caches.delete(name);
+                                        })
                 );
             }).then(() => {
                 console.log('Service Worker: Alle app-caches ryddet. Genindlæser side...');
-                // Send en besked tilbage til klienten for at indikere, at cachen er ryddet og bede om genindlæsning
                 event.source.postMessage({ type: 'CACHE_CLEARED_RELOAD' });
             })
         );

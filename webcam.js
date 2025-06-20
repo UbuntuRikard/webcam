@@ -7,12 +7,12 @@ This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
-
+ 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
-
+ 
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
@@ -32,21 +32,21 @@ const zoomInButton = document.getElementById("zoomIn");
 const zoomOutButton = document.getElementById("zoomOut");
 const resetZoomButton = document.getElementById("resetZoom");
 const currentZoomDisplay = document.getElementById("currentZoomDisplay");
+// Ny DOM element for skærmkontrol
+const toggleScreenLockButton = document.getElementById("toggleScreenLockButton");
+
 
 // Globale variabler
 let stream = null; // Stream fra kameraet
 let ws = null;     // WebSocket forbindelse
 let mediaRecorder = null; // MediaRecorder instance
-let wakeLock = null; // Skærmlås
+let wakeLock = null; // Skærmlås (actual wake lock object)
 let currentZoomLevel = 1.0; // Aktuel zoomniveau
 const ZOOM_STEP = 1; // Hvor much zoom ændres pr. klik
 const MAX_ZOOM = 8.0; // Maksimum digital zoom
 const MIN_ZOOM = 1.0; // Minimum digital zoom
 
 // --- KONFIGURATIONSVÆRDIER ---
-// Juster denne bitrate for at påvirke videokvalitet vs. båndbredde/strømforbrug.
-// Højere værdi = bedre kvalitet, mere båndbredde, højere strømforbrug.
-// Standard 2 Mbps (2.000.000 bits per sekund) er et godt udgangspunkt for HD.
 const VIDEO_BITRATE_BPS = 2_000_000; // 2 Megabit per sekund
 
 // Overlays data (dynamiske informationer)
@@ -67,6 +67,9 @@ let APP_VERSION = "Ukendt Version"; // Appens version, vil blive opdateret fra m
 // Array til at gemme alle log-entries i hukommelsen
 let appLogs = [];
 
+// Ny global variabel for brugerpræference for skærmlås
+let userPrefersScreenAlwaysOn = true; // Standard: Skærmen holdes tændt
+
 
 // --- Hjælpefunktioner ---
 
@@ -84,7 +87,6 @@ async function getAppVersionFromManifest() {
         }
     } catch (e) {
         console.error('Fejl ved hentning af app version fra manifest.json:', e);
-        // APP_VERSION forbliver "Ukendt Version"
     }
 }
 
@@ -95,6 +97,8 @@ function saveConfig() {
     localStorage.setItem("selectedResolution", resolutionSelect.value);
     localStorage.setItem("selectedFps", fpsSelect.value);
     localStorage.setItem("currentZoomLevel", currentZoomLevel);
+    // Gem ny præference for skærmlås
+    localStorage.setItem("userPrefersScreenAlwaysOn", userPrefersScreenAlwaysOn);
 }
 
 function loadConfig() {
@@ -104,6 +108,9 @@ function loadConfig() {
     fpsSelect.value = localStorage.getItem("selectedFps") || "10";
     currentZoomLevel = parseFloat(localStorage.getItem("currentZoomLevel")) || 1.0;
     currentZoomDisplay.textContent = `Zoom: x${currentZoomLevel.toFixed(1)}`;
+    // Indlæs ny præference for skærmlås
+    const storedScreenPref = localStorage.getItem("userPrefersScreenAlwaysOn");
+    userPrefersScreenAlwaysOn = (storedScreenPref === "false") ? false : true; // "true" hvis ikke fundet eller "true"
 }
 
 function updateButtonStates() {
@@ -138,7 +145,7 @@ async function populateCameraList() {
             return;
         }
 
-        cameraSelect.innerHTML = ''; // Ryd eksisterende valgmuligheder
+        cameraSelect.innerHTML = ''; 
         videoDevices.forEach(device => {
             const option = document.createElement("option");
             option.value = device.deviceId;
@@ -150,7 +157,6 @@ async function populateCameraList() {
         if (savedCameraId && Array.from(cameraSelect.options).some(option => option.value === savedCameraId)) {
             cameraSelect.value = savedCameraId;
         } else if (videoDevices.length > 0) {
-            // Prøv at vælge et bagkamera som standard, hvis muligt
             const backCamera = videoDevices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('environment'));
             if (backCamera) {
                 cameraSelect.value = backCamera.deviceId;
@@ -168,18 +174,16 @@ async function populateCameraList() {
 function adjustZoom(step) {
     let newZoomLevel = currentZoomLevel + step;
     newZoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoomLevel));
-    setZoomLevel(parseFloat(newZoomLevel.toFixed(1))); // Afrund til én decimal
+    setZoomLevel(parseFloat(newZoomLevel.toFixed(1))); 
 }
 
 function setZoomLevel(level) {
-    if (currentZoomLevel === level) return; // Ingen ændring
+    if (currentZoomLevel === level) return; 
 
     currentZoomLevel = level;
     saveConfig();
-    updateOverlayInfo(); // Opdater visning med det samme
+    updateOverlayInfo(); 
 
-    // Genstart kameraet med nye constraints, hvis streamen kører
-    // Dette er nødvendigt, da den ideelle input-opløsning afhænger af zoom-niveauet.
     if (stream) {
         stopCamera();
         startCamera();
@@ -194,8 +198,8 @@ async function logAppState(reason = "App status tjek") {
         return;
     }
 
-    const currentBatteryLevel = batteryManager.level; // Batteriniveau som float (0.0 til 1.0)
-    const currentBatteryPercent = Math.round(currentBatteryLevel * 100); // Konverter til heltal procent
+    const currentBatteryLevel = batteryManager.level; 
+    const currentBatteryPercent = Math.round(currentBatteryLevel * 100); 
 
     const lastLoggedPercent = lastLoggedBatteryLevel !== null ? Math.round(lastLoggedBatteryLevel * 100) : null;
     
@@ -203,7 +207,7 @@ async function logAppState(reason = "App status tjek") {
         const logEntry = {
             timestamp: new Date().toISOString(),
             version: APP_VERSION,
-            temperature: "Ikke tilgængelig via Web API", // Web API'er giver ikke adgang til enhedstemperatur
+            temperature: "Ikke tilgængelig via Web API", 
             appStatus: appStatus,
             batteryPercent: currentBatteryPercent,
             batteryIsCharging: batteryManager.charging,
@@ -212,7 +216,7 @@ async function logAppState(reason = "App status tjek") {
         appLogs.push(logEntry); 
         lastLoggedBatteryLevel = currentBatteryLevel; 
         saveAppLogs(); 
-        console.log("Log saved to localStorage:", logEntry.reason); // Denne konsollog er til udvikling/fejlfinding
+        console.log("Log gemt til localStorage:", logEntry.reason); 
     }
 }
 
@@ -289,6 +293,86 @@ function clearAppLogs() {
     }
 }
 
+// --- Wake Lock API for at holde skærmen tændt (modificeret) ---
+async function requestWakeLock() {
+    // Anmod kun om Wake Lock, hvis API'en er tilgængelig, OG brugeren ønsker skærmen tændt, OG låsen ikke allerede er aktiv
+    if ('wakeLock' in navigator && userPrefersScreenAlwaysOn && !wakeLock) { 
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Screen Wake Lock er aktiv!');
+            updateScreenLockButtonText(); // Opdater knaptekst til "Skærm: Tændt"
+        } catch (err) {
+            console.error('Kunne ikke aktivere Screen Wake Lock:', err);
+            // Hvis anmodning mislykkes (f.eks. bruger nægter), opdater præference til at afspejle dette
+            userPrefersScreenAlwaysOn = false; // Antag brugeren ikke ønsker den tændt, hvis den fejler
+            saveConfig();
+            updateScreenLockButtonText(); // Opdater knap til "Skærm: Slukket (Fejl)"
+            alert('FEJL: Kunne ikke holde skærmen tændt. Browseren/enheden tillader det muligvis ikke eller brugeren nægtede.');
+        }
+    } else if (!userPrefersScreenAlwaysOn) {
+        console.log('Wake Lock API: Anmodning skippet (brugerpræference er "Slukket").');
+    } else if (wakeLock) {
+        console.log('Wake Lock API: Lås er allerede aktiv.');
+    } else {
+        console.warn('Wake Lock API understøttes ikke i denne browser.');
+        userPrefersScreenAlwaysOn = false; // Kan ikke holde skærmen tændt, hvis API ikke understøttes
+        saveConfig();
+        updateScreenLockButtonText(); // Opdater knap til "Skærm: Slukket (Ikke understøttet)"
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock) {
+        wakeLock.release()
+            .then(() => {
+                console.log('Screen Wake Lock er frigivet.');
+                wakeLock = null;
+                // Opdater knapteksten, hvis brugerpræferencen er "Slukket"
+                // Ellers forbliver den "Tændt", og Wake Lock anmodes ved næste stream start
+                if (!userPrefersScreenAlwaysOn) { 
+                   updateScreenLockButtonText(); // Sørg for den står som "Skærm: Slukket"
+                }
+            })
+            .catch((err) => {
+                console.error('Fejl ved frigivelse af Screen Wake Lock:', err);
+            });
+    }
+}
+
+// Ny funktion til at håndtere klik på skærmknappen
+function handleScreenToggleButton() {
+    userPrefersScreenAlwaysOn = !userPrefersScreenAlwaysOn; // Toggle præferencen
+    saveConfig(); // Gem den nye præference
+
+    updateScreenLockButtonText(); // Opdater knaptekst øjeblikkeligt
+
+    // Hvis streaming er aktiv, anvend den nye wake lock præference med det samme
+    if (appStatus === 'Streaming') {
+        if (userPrefersScreenAlwaysOn) {
+            requestWakeLock(); // Anmod hvis brugeren nu foretrækker den tændt
+        } else {
+            releaseWakeLock(); // Frigør hvis brugeren nu foretrækker den slukket
+        }
+    }
+    // Hvis ikke streaming, vil præferencen blive anvendt næste gang streaming starter
+}
+
+// Helper til at opdatere knapteksten baseret på brugerpræference
+function updateScreenLockButtonText() {
+    if (toggleScreenLockButton) {
+        let buttonText = userPrefersScreenAlwaysOn ? "Skærm: Tændt" : "Skærm: Slukket";
+        // Tilføj yderligere info, hvis Wake Lock ikke understøttes eller der var en fejl
+        if (!('wakeLock' in navigator)) {
+            buttonText = "Skærm: Slukket (Ikke understøttet)";
+        } else if (!userPrefersScreenAlwaysOn && wakeLock === null && appStatus === 'Streaming') {
+             // Hvis brugeren valgte slukket, men Wake Lock stadig er aktiv fra tidligere anmodning,
+             // eller hvis der var en fejl. Dette er en kompleks edge case.
+             // Simplicitet: hvis den er slukket og vi ikke er i stand til at holde den tændt.
+        }
+        toggleScreenLockButton.textContent = buttonText;
+    }
+}
+
 
 // --- Kamera og Streaming Funktioner ---
 async function startCamera() {
@@ -359,8 +443,8 @@ async function startCamera() {
 
         updateButtonStates();
         startSendingVideoFrames(); 
-        requestWakeLock();
-        
+        await requestWakeLock(); // Anmod om Wake Lock baseret på præference
+
         // --- LOGNING: Sæt status til 'Streaming' efter succesfuld start ---
         appStatus = 'Streaming';
         await logAppState("Stream startet"); 
@@ -470,7 +554,7 @@ async function startSendingVideoFrames() {
                 appStatus = 'Disconnected';
                 await logAppState("Stream afbrudt uventet - MediaRecorder fejl");
             }
-            stopCamera(); // Dette vil sætte appStatus til 'Idle' og logge det
+            stopCamera(); 
         };
 
         mediaRecorder.start(mediaRecorderDataInterval);
@@ -489,7 +573,7 @@ async function startSendingVideoFrames() {
             appStatus = 'Disconnected';
             await logAppState("Stream afbrudt uventet - WebSocket fejl");
         }
-        stopCamera(); // Dette vil sætte appStatus til 'Idle' og logge det
+        stopCamera(); 
     };
 
     // --- LOGNING: Modificer ws.onclose ---
@@ -505,12 +589,12 @@ async function startSendingVideoFrames() {
         }
         mediaRecorder = null; 
         cancelAnimationFrame(animationFrameId);
-        releaseWakeLock(); 
+        releaseWakeLock(); // Altid frigør Wake Lock, når WS lukker
         updateButtonStates();
     };
 }
 
-let animationFrameId; // Til at styre requestAnimationFrame loopet
+let animationFrameId; 
 
 function drawFrame() {
     if (!video.srcObject || video.paused || video.ended) {
@@ -545,12 +629,10 @@ function drawFrame() {
     const currentFps = fpsSelect.value;
     const currentResolution = `${canvas.width}x${canvas.height}`;
 
-    // Opdater batteri-info for overlay, hvis batteryManager er klar
     if (batteryManager) {
         overlayData.battery = `${(batteryManager.level * 100).toFixed(0)}% ${batteryManager.charging ? "(Lader)" : ""}`;
     }
 
-    // Info for overlay
     const overlayLines = [
         `App: ${APP_VERSION}`, 
         `Server: ${ipInput.value}:${portInput.value}`,
@@ -572,7 +654,6 @@ function drawFrame() {
 
 
 function stopCamera() {
-    // --- LOGNING: Sæt status til 'Idle' ved manuelt stop ---
     const wasStreaming = appStatus === 'Streaming'; 
     appStatus = 'Idle';
     if (wasStreaming) { 
@@ -592,38 +673,11 @@ function stopCamera() {
     }
     mediaRecorder = null; 
     cancelAnimationFrame(animationFrameId); 
-    releaseWakeLock();
+    releaseWakeLock(); // Altid frigør Wake Lock, når kameraet stoppes manuelt
     statusText.textContent = "⚪ Streaming stoppet";
     updateButtonStates();
 }
 
-
-// --- Wake Lock API for at holde skærmen tændt ---
-async function requestWakeLock() {
-    if ('wakeLock' in navigator) {
-        try {
-            wakeLock = await navigator.wakeLock.request('screen');
-            console.log('Screen Wake Lock er aktiv!');
-        } catch (err) {
-            console.error('Kunne ikke aktivere Screen Wake Lock:', err);
-        }
-    } else {
-        console.warn('Wake Lock API understøttes ikke i denne browser.');
-    }
-}
-
-function releaseWakeLock() {
-    if (wakeLock) {
-        wakeLock.release()
-            .then(() => {
-                console.log('Screen Wake Lock er frigivet.');
-                wakeLock = null;
-            })
-            .catch((err) => {
-                console.error('Fejl ved frigivelse af Screen Wake Lock:', err);
-            });
-    }
-}
 
 // --- Initialisering og Hændelseslyttere ---
 document.addEventListener("DOMContentLoaded", async () => {
@@ -633,11 +687,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateButtonStates();
     updateOverlayInfo(); 
 
+    // Sæt initial knaptekst for skærmlås
+    updateScreenLockButtonText(); 
+
+    // Opsæt event listeners
     startButton.addEventListener("click", startCamera);
     stopButton.addEventListener("click", stopCamera);
     zoomInButton.addEventListener("click", () => adjustZoom(ZOOM_STEP));
     zoomOutButton.addEventListener("click", () => adjustZoom(-ZOOM_STEP));
     resetZoomButton.addEventListener("click", () => setZoomLevel(1.0));
+    // Ny event listener for skærmkontrolknappen
+    toggleScreenLockButton.addEventListener("click", handleScreenToggleButton);
+
 
     resolutionSelect.addEventListener("change", () => {
         saveConfig();
@@ -680,7 +741,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.warn("Logning: Battery Status API understøttes ikke af denne browser.");
     }
 
-    // --- Opsæt event listeners for de nye knapper ---
+    // --- Opsæt event listeners for log-knapperne ---
     const downloadLogsButton = document.getElementById('downloadLogsButton');
     if (downloadLogsButton) {
         downloadLogsButton.addEventListener('click', downloadAppLogs);
