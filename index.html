@@ -5,17 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Webcam Streamer</title>
     <link rel="stylesheet" href="style.css">
-    <!-- KORREKTION HER: Manifest-filen skal være i /webcam/ undermappen -->
-    <link rel="manifest" href="/webcam/manifest.json">
-    <meta name="theme-color" content="#000000"/> <!-- Rettet fra #317EFB for at matche manifest -->
+    <!-- STI KORREKTION: Brug relativ sti til manifest.json -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000"/> 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta name="apple-mobile-web-app-title" content="Webcam Streamer">
-    <!-- KORREKTION HER: Ikon-stier skal også inkludere undermappen -->
-    <link rel="apple-touch-icon" href="/webcam/freepik_camera_192x192.png"> 
-    <!-- For 512x512 icon, selvom apple-touch-icon normalt er 180x180 eller 152x152, 
-         så PWA-ikonerne også er fundet -->
-    <link rel="apple-touch-icon" sizes="512x512" href="/webcam/freepik_camera_512x512.png"> 
+    <!-- STI KORREKTION: Brug relative stier til ikoner -->
+    <link rel="apple-touch-icon" href="freepik_camera_192x192.png"> 
+    <link rel="apple-touch-icon" sizes="512x512" href="freepik_camera_512x512.png"> 
 </head>
 <body>
     <div class="container">
@@ -35,6 +33,11 @@
                 <button id="resetZoom" class="action-button">Reset Zoom</button>
                 <button id="startButton" class="action-button primary">Start</button>
                 <button id="stopButton" class="action-button secondary" disabled>Stop</button>
+            </div>
+
+            <div class="control-row action-row" style="margin-top: 15px;">
+                <button id="downloadLogsButton" class="action-button primary">Download Log</button>
+                <button id="clearLogsButton" class="action-button secondary">Ryd Logs</button>
             </div>
 
             <div class="control-row">
@@ -72,12 +75,13 @@
     </div>
 
     <script src="webcam.js"></script>
-    <!-- KORREKTION HER: Service Worker registrering skal også ske med korrekt sti -->
     <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // Bemærk stien /webcam/sw.js
-        navigator.serviceWorker.register('/webcam/sw.js') 
+        // STI KORREKTION: Brug relativ sti 'sw.js' og eksplicit scope './'
+        // Dette fungerer typisk bedst for GitHub Pages-projektmapper,
+        // da det registrerer Service Worker'en for den aktuelle mappe.
+        navigator.serviceWorker.register('sw.js', { scope: './' }) 
           .then(registration => {
             console.log('Service Worker registreret med scope:', registration.scope);
           })
@@ -87,8 +91,5 @@
       });
     }
     </script>
-    <!-- Fjern eller omdøb service-worker-registration.js hvis du flytter koden ind her.
-         Hvis den forbliver en separat fil, skal dens sti også rettes. -->
-    <!-- <script src="/service-worker-registration.js"></script> -->
 </body>
 </html>

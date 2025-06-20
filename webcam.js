@@ -37,10 +37,9 @@ const currentZoomDisplay = document.getElementById("currentZoomDisplay");
 let stream = null; // Stream fra kameraet
 let ws = null;     // WebSocket forbindelse
 let mediaRecorder = null; // MediaRecorder instance
-let appVersion = "Ukendt Version"; // App version, vil blive opdateret fra manifest.json
 let wakeLock = null; // Skærmlås
 let currentZoomLevel = 1.0; // Aktuel zoomniveau
-const ZOOM_STEP = 1; // Hvor meget zoom ændres pr. klik
+const ZOOM_STEP = 1; // Hvor much zoom ændres pr. klik
 const MAX_ZOOM = 8.0; // Maksimum digital zoom
 const MIN_ZOOM = 1.0; // Minimum digital zoom
 
@@ -58,69 +57,34 @@ let overlayData = {
     device: "N/A"
 };
 
-// --- Initialisering og Hændelseslyttere ---
-document.addEventListener("DOMContentLoaded", async () => {
-    loadConfig();
-    await populateCameraList();
-    await getAppVersionFromManifest(); // Hent app-version tidligt
-    updateButtonStates();
-    updateOverlayInfo(); // Initial opdatering af overlays
+// --- Nye globale variabler for avanceret logning ---
+let lastLoggedBatteryLevel = null; // Gemmer det sidste batteriniveau, der blev logget (float 0.0-1.0)
+let appStatus = 'Idle'; // Appens status: 'Idle', 'Streaming', 'Disconnected'
+let batteryManager = null; // Vil holde BatteryManager objektet
+const LOG_BATTERY_DEVIATION_PERCENT = 1; // Log ved mindst 1% ændring i batteriniveau
+let APP_VERSION = "Ukendt Version"; // Appens version, vil blive opdateret fra manifest.json
 
-    startButton.addEventListener("click", startCamera);
-    stopButton.addEventListener("click", stopCamera);
-    zoomInButton.addEventListener("click", () => adjustZoom(ZOOM_STEP));
-    zoomOutButton.addEventListener("click", () => adjustZoom(-ZOOM_STEP));
-    resetZoomButton.addEventListener("click", () => setZoomLevel(1.0));
+// Array til at gemme alle log-entries i hukommelsen
+let appLogs = [];
 
-    // Lyt til ændringer i opløsning og FPS for at genstarte streamen
-    resolutionSelect.addEventListener("change", () => {
-        saveConfig();
-        if (stream) {
-            stopCamera();
-            startCamera();
-        }
-    });
-    fpsSelect.addEventListener("change", () => {
-        saveConfig();
-        if (stream) {
-            stopCamera();
-            startCamera();
-        }
-    });
-
-    // Få batteristatus
-    if ('getBattery' in navigator) {
-        navigator.getBattery().then(battery => {
-            overlayData.battery = `${(battery.level * 100).toFixed(0)}%`;
-            battery.addEventListener('levelchange', () => {
-                overlayData.battery = `${(battery.level * 100).toFixed(0)}%`;
-            });
-        });
-    }
-
-    // Få enhedsinformation (baseret på user agent, simpelt)
-    overlayData.device = navigator.userAgent.match(/\(([^)]+)\)/)?.[1] || "Ukendt Enhed";
-    if (overlayData.device.length > 25) { // Tronker længere strings
-        overlayData.device = overlayData.device.substring(0, 22) + "...";
-    }
-});
 
 // --- Hjælpefunktioner ---
 
 // Funktion til at hente app-versionen fra manifest.json
 async function getAppVersionFromManifest() {
     try {
-        const response = await fetch('manifest.json'); // Stien er relativ til roden af din PWA
+        // STI KORREKTION: Brug relativ sti til manifest.json
+        const response = await fetch('manifest.json'); 
         if (response.ok) {
             const manifest = await response.json();
             if (manifest.version) {
-                appVersion = `V. ${manifest.version}`; // Sæt den globale appVersion variabel
-                console.log("App version fra manifest:", appVersion);
+                APP_VERSION = `V. ${manifest.version}`; // Sæt den globale APP_VERSION variabel
+                console.log("App version fra manifest:", APP_VERSION);
             }
         }
     } catch (e) {
         console.error('Fejl ved hentning af app version fra manifest.json:', e);
-        // appVersion forbliver "Ukendt Version"
+        // APP_VERSION forbliver "Ukendt Version"
     }
 }
 
@@ -222,12 +186,119 @@ function setZoomLevel(level) {
     }
 }
 
+// --- Avanceret Logning & Batteriovervågning Funktioner ---
+
+async function logAppState(reason = "App status tjek") {
+    if (!batteryManager) {
+        console.warn("Logning: Battery Status API er ikke tilgængelig eller ikke klar. Kan ikke logge batteriniveau.");
+        return;
+    }
+
+    const currentBatteryLevel = batteryManager.level; // Batteriniveau som float (0.0 til 1.0)
+    const currentBatteryPercent = Math.round(currentBatteryLevel * 100); // Konverter til heltal procent
+
+    const lastLoggedPercent = lastLoggedBatteryLevel !== null ? Math.round(lastLoggedBatteryLevel * 100) : null;
+    
+    if (lastLoggedPercent === null || Math.abs(currentBatteryPercent - lastLoggedPercent) >= LOG_BATTERY_DEVIATION_PERCENT) {
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            version: APP_VERSION,
+            temperature: "Ikke tilgængelig via Web API", // Web API'er giver ikke adgang til enhedstemperatur
+            appStatus: appStatus,
+            batteryPercent: currentBatteryPercent,
+            batteryIsCharging: batteryManager.charging,
+            reason: reason 
+        };
+        appLogs.push(logEntry); 
+        lastLoggedBatteryLevel = currentBatteryLevel; 
+        saveAppLogs(); 
+        console.log("Log saved to localStorage:", logEntry.reason); // Denne konsollog er til udvikling/fejlfinding
+    }
+}
+
+function loadAppLogs() {
+    try {
+        const storedLogs = localStorage.getItem('webcamAppLogs');
+        if (storedLogs) {
+            appLogs = JSON.parse(storedLogs);
+            if (appLogs.length > 0) {
+                lastLoggedBatteryLevel = appLogs[appLogs.length - 1].batteryPercent / 100;
+            }
+            console.log("Logning: Indlæste tidligere logs.", appLogs.length, "entries.");
+        }
+    } catch (e) {
+        console.error("Logning: Fejl ved indlæsning af logs fra localStorage:", e);
+        appLogs = []; 
+    }
+}
+
+function saveAppLogs() {
+    try {
+        localStorage.setItem('webcamAppLogs', JSON.stringify(appLogs));
+    } catch (e) {
+        console.error("Logning: Fejl ved gemning af logs til localStorage:", e);
+    }
+}
+
+function downloadAppLogs() {
+    if (appLogs.length === 0) {
+        alert("Ingen logs at downloade.");
+        return;
+    }
+
+    const headers = Object.keys(appLogs[0]);
+    let csv = '\uFEFF' + headers.join(',') + '\n'; 
+
+    appLogs.forEach(entry => {
+        const row = headers.map(header => {
+            let value = entry[header];
+            if (value === null || typeof value === 'undefined') {
+                value = '';
+            } else {
+                value = String(value);
+                if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+                    value = '"' + value.replace(/"/g, '""') + '"'; 
+                }
+            }
+            return value;
+        });
+        csv += row.join(',') + '\n'; 
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' }); 
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-'); 
+    a.download = `webcam_app_logs_${timestamp}.csv`; 
+    document.body.appendChild(a); 
+    a.click(); 
+    document.body.removeChild(a); 
+    URL.revokeObjectURL(url); 
+
+    console.log("Logning: Logs downloaded as CSV.");
+}
+
+function clearAppLogs() {
+    if (confirm("Er du sikker på, at du vil slette alle gemte app logs? Dette kan ikke fortrydes.")) {
+        localStorage.removeItem('webcamAppLogs');
+        appLogs = [];
+        lastLoggedBatteryLevel = null; 
+        console.log("Logning: Alle logs slettet fra localStorage.");
+    }
+}
+
+
 // --- Kamera og Streaming Funktioner ---
 async function startCamera() {
     console.log("Forsøger at starte kamera...");
     statusText.textContent = "🟡 Starter kamera...";
 
-    if (stream) { // Stop eksisterende stream, hvis den kører
+    // --- LOGNING: Nulstil status inden start af kamera for at sikre korrekt logning ---
+    appStatus = 'Idle'; 
+
+    if (stream) { 
         stopCamera();
     }
 
@@ -241,19 +312,13 @@ async function startCamera() {
 
     const selectedDeviceLabel = cameraSelect.options[cameraSelect.selectedIndex]?.textContent.toLowerCase();
     const fps = parseInt(fpsSelect.value, 10);
-    const selectedOutputResolution = getResolutionSettings(); // Dette er din *output* opløsning (f.eks. 1280x720)
+    const selectedOutputResolution = getResolutionSettings(); 
 
-    // === Beregn den dynamisk nødvendige input-opløsning fra kameraet ===
-    // Dette er den *mindste* ideelle opløsning, vi anmoder kameraet om
-    // for at understøtte den valgte output-opløsning ved den aktuelle zoom-faktor.
     let requiredInputWidth = selectedOutputResolution.width * currentZoomLevel;
     let requiredInputHeight = selectedOutputResolution.height * currentZoomLevel;
 
-    // === Sikkerhedsforanstaltning: Sæt et realistisk øvre loft for anmodet opløsning ===
-    // Dette forhindrer os i at anmode om *ekstremt* høje ideal-værdier,
-    // som ingen kameraer realistisk kan levere. Juster disse værdier baseret på forventet hardware.
-    const ABSOLUTE_MAX_CAMERA_WIDTH = 4096; // F.eks. 4K
-    const ABSOLUTE_MAX_CAMERA_HEIGHT = 2160; // F.eks. 4K
+    const ABSOLUTE_MAX_CAMERA_WIDTH = 4096; 
+    const ABSOLUTE_MAX_CAMERA_HEIGHT = 2160; 
 
     let idealCameraInputWidth = Math.min(requiredInputWidth, ABSOLUTE_MAX_CAMERA_WIDTH);
     let idealCameraInputHeight = Math.min(requiredInputHeight, ABSOLUTE_MAX_CAMERA_HEIGHT);
@@ -270,7 +335,6 @@ async function startCamera() {
         }
     };
 
-    // FacingMode foran/bagud
     if (selectedDeviceLabel.includes('front')) {
         videoConstraints.video.facingMode = 'user';
     } else if (selectedDeviceLabel.includes('back') || selectedDeviceLabel.includes('environment')) {
@@ -278,32 +342,34 @@ async function startCamera() {
     }
 
     try {
-        // Få stream direkte fra kameraet
         stream = await navigator.mediaDevices.getUserMedia(videoConstraints);
 
         console.log("Kamerastrøm opnået med succes.");
         statusText.textContent = "🟢 Kamera startet, forbinder...";
 
-        video.srcObject = stream; // Sæt kamerastrømmen til det (skjulte) video-element
-        await video.play(); // Sørg for at videoen spiller, så vi kan tegne fra den
+        video.srcObject = stream; 
+        await video.play(); 
 
         const actualVideoSettings = stream.getVideoTracks()[0].getSettings();
         console.log(`Faktisk kamera INPUT opløsning: ${actualVideoSettings.width}x${actualVideoSettings.height}, Faktisk FPS: ${actualVideoSettings.frameRate}`);
 
-        // Konfigurer canvas til output-opløsningen
         canvas.width = selectedOutputResolution.width;
         canvas.height = selectedOutputResolution.height;
         console.log(`Canvas OUTPUT opløsning (til stream): ${canvas.width}x${canvas.height}`);
 
         updateButtonStates();
-        startSendingVideoFrames(); // Ny funktion til at starte streaming via MediaRecorder
+        startSendingVideoFrames(); 
         requestWakeLock();
+        
+        // --- LOGNING: Sæt status til 'Streaming' efter succesfuld start ---
+        appStatus = 'Streaming';
+        await logAppState("Stream startet"); 
+
 
     } catch (error) {
         console.error("Fejl ved start af kamera:", error);
         let userMessage = "Kunne ikke starte videokilden.";
 
-        // Generelle fejl, der forhindrer streamen i at starte
         if (error.name === 'NotReadableError') {
             userMessage = "Kameraet er sandsynligvis i brug af en anden app, eller der er en midlertidig hardwarefejl. Prøv at **genstarte telefonen, lukke alle andre apps** (især dem, der bruger kameraet), og sørg for, at intet andet bruger kameraet. (Fejlkode: NotReadableError)";
         } else if (error.name === 'NotAllowedError') {
@@ -315,8 +381,6 @@ async function startCamera() {
         } else if (error.name === 'AbortError') {
             userMessage = "Kameratilgang blev afbrudt. Prøv at starte igen. (Fejlkode: AbortError)";
         }
-        // OverconstrainedError håndteres ikke eksplicit med en alert her.
-        // getUserMedia vil blot falde tilbage til den bedst mulige opløsning.
         else {
             userMessage = "En ukendt fejl opstod under start af kameraet. (Fejlkode: " + error.name + ")";
         }
@@ -324,6 +388,8 @@ async function startCamera() {
         alert("FEJL ved start af kamera: " + userMessage);
         statusText.textContent = "🔴 Kamerastart mislykkedes";
         updateButtonStates();
+        // --- LOGNING: Forbliv i idle, hvis start fejler ---
+        appStatus = 'Idle'; 
     }
 }
 
@@ -337,22 +403,19 @@ async function startSendingVideoFrames() {
     }
 
     const fps = parseInt(fpsSelect.value, 10);
-    // Interval for MediaRecorder data (hvor ofte blobs skal sendes)
-    // Send en blob for hver frame, hvis muligt.
     const mediaRecorderDataInterval = 1000 / fps; 
 
-    ws = new WebSocket(`wss://${ip}:${port}/ws`); // Vigtigt: Sørg for at stien matcher serverens rute (/ws)
+    ws = new WebSocket(`wss://${ip}:${port}/ws`); 
 
     ws.onopen = () => {
         if (!wakeLock) {
             statusText.textContent = "🔵 Streaming startet";
         }
         
-        // Bestil de foretrukne MIME-typer og codecs
         const preferredMimeTypes = [
-            'video/mp4;codecs=avc1', // H.264 for bred kompatibilitet i browsere (Chrome/Safari)
-            'video/webm;codecs=vp8', // Standard WebM/VP8
-            'video/webm;codecs=vp9'  // Bedre kvalitet WebM/VP9 (hvis understøttet)
+            'video/mp4;codecs=avc1', 
+            'video/webm;codecs=vp8', 
+            'video/webm;codecs=vp9'  
         ];
 
         let mimeTypeToUse = '';
@@ -369,68 +432,80 @@ async function startSendingVideoFrames() {
             return;
         }
 
-        // --- NYT: Send valgte MIME type til serveren ---
-        // Serveren forventer denne besked først for at konfigurere FFmpeg input
         ws.send(JSON.stringify({ type: "init", mimeType: mimeTypeToUse }));
         console.log(`Sending init message to server with mimeType: ${mimeTypeToUse}`);
 
 
-        // Lav en MediaStream fra canvas'et
-        // Dette fanger indholdet af canvas'et som en videostrøm
-        const canvasStream = canvas.captureStream(fps); // FPS for den stream, vi fanger fra canvas
+        const canvasStream = canvas.captureStream(fps); 
 
         try {
             mediaRecorder = new MediaRecorder(canvasStream, { 
                 mimeType: mimeTypeToUse,
-                bitsPerSecond: VIDEO_BITRATE_BPS // Anvend den konfigurerede bitrate
+                bitsPerSecond: VIDEO_BITRATE_BPS 
             });
             console.log(`MediaRecorder oprettet med mimeType: ${mimeTypeToUse} og bitrate: ${VIDEO_BITRATE_BPS} bps`);
         } catch (e) {
             console.error('Kunne ikke oprette MediaRecorder med specificeret mimeType og bitrate.', e);
             alert("FEJL: Din browser understøtter ikke MediaStream Recording API'et til videostreaming med den valgte konfiguration, eller der er en anden fejl.");
-            stopCamera(); // Stop det hele, hvis vi ikke kan streame
+            stopCamera(); 
             return;
         }
 
         mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0 && ws.readyState === WebSocket.OPEN) {
-                ws.send(event.data); // Send video blob'en
+                ws.send(event.data); 
             }
         };
 
         mediaRecorder.onstop = () => {
             console.log("MediaRecorder stopped.");
         };
-        mediaRecorder.onerror = (event) => {
+
+        // --- LOGNING: Modificer mediaRecorder.onerror ---
+        mediaRecorder.onerror = async (event) => {
             console.error("MediaRecorder Fejl:", event.error);
             alert("FEJL: Problemer med videooptageren. Genstart streamen.");
-            stopCamera();
+            
+            if (appStatus === 'Streaming') {
+                appStatus = 'Disconnected';
+                await logAppState("Stream afbrudt uventet - MediaRecorder fejl");
+            }
+            stopCamera(); // Dette vil sætte appStatus til 'Idle' og logge det
         };
 
-        // Start MediaRecorder
         mediaRecorder.start(mediaRecorderDataInterval);
 
-        // Start tegning til canvas i en requestAnimationFrame loop
-        // Dette er den loop, der håndterer digital zoom og overlays.
         drawFrame();
 
     };
 
-    ws.onerror = (error) => {
+    // --- LOGNING: Modificer ws.onerror ---
+    ws.onerror = async (error) => {
         console.error("WebSocket Fejl:", error);
         statusText.textContent = "🔴 Kunne ikke forbinde til server";
         alert("FEJL: Kunne ikke forbinde til streamingserveren. Tjek IP/Port, firewall og serverstatus.");
-        stopCamera();
+        
+        if (appStatus === 'Streaming') {
+            appStatus = 'Disconnected';
+            await logAppState("Stream afbrudt uventet - WebSocket fejl");
+        }
+        stopCamera(); // Dette vil sætte appStatus til 'Idle' og logge det
     };
 
-    ws.onclose = () => {
+    // --- LOGNING: Modificer ws.onclose ---
+    ws.onclose = async () => {
         statusText.textContent = "⚪ Streaming stoppet";
+        
+        if (appStatus === 'Streaming') { 
+            appStatus = 'Disconnected';
+            await logAppState("Stream afbrudt uventet - WebSocket lukket");
+        }
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
         }
-        // Nulstil tegne-loop
+        mediaRecorder = null; 
         cancelAnimationFrame(animationFrameId);
-        releaseWakeLock(); // Release wake lock when stopping the camera
+        releaseWakeLock(); 
         updateButtonStates();
     };
 }
@@ -443,24 +518,20 @@ function drawFrame() {
         return;
     }
 
-    // Få den faktiske opløsning, som kameraet leverer
     const videoWidth = video.videoWidth;
     const videoHeight = video.videoHeight;
 
-    // Beregn beskæringsområdet baseret på aktuel zoom
     const cropWidth = videoWidth / currentZoomLevel;
     const cropHeight = videoHeight / currentZoomLevel;
     const cropX = (videoWidth - cropWidth) / 2;
     const cropY = (videoHeight - cropHeight) / 2;
 
-    // Ryd canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Tegn den zoomede og beskårne videoramme til canvas
     ctx.drawImage(
         video,
-        cropX, cropY, cropWidth, cropHeight, // Kilde (beskåret) rektangel fra video-element
-        0, 0, canvas.width, canvas.height    // Destination (hele canvas-området)
+        cropX, cropY, cropWidth, cropHeight, 
+        0, 0, canvas.width, canvas.height  
     );
 
     // === Tegn Overlays ===
@@ -474,9 +545,14 @@ function drawFrame() {
     const currentFps = fpsSelect.value;
     const currentResolution = `${canvas.width}x${canvas.height}`;
 
+    // Opdater batteri-info for overlay, hvis batteryManager er klar
+    if (batteryManager) {
+        overlayData.battery = `${(batteryManager.level * 100).toFixed(0)}% ${batteryManager.charging ? "(Lader)" : ""}`;
+    }
+
     // Info for overlay
     const overlayLines = [
-        `App: ${appVersion}`, // Nu dynamisk fra manifest.json
+        `App: ${APP_VERSION}`, 
         `Server: ${ipInput.value}:${portInput.value}`,
         `Output: ${currentResolution} @ ${currentFps} FPS`,
         `Zoom: x${currentZoomLevel.toFixed(1)}`,
@@ -486,30 +562,35 @@ function drawFrame() {
 
     let yOffset = 10;
     for (const line of overlayLines) {
-        ctx.strokeText(line, 10, yOffset); // Sort omrids
-        ctx.fillText(line, 10, yOffset);  // Hvid tekst
-        yOffset += 25; // Linjehøjde
+        ctx.strokeText(line, 10, yOffset); 
+        ctx.fillText(line, 10, yOffset);  
+        yOffset += 25; 
     }
 
-    // Fortsæt tegne-loop
     animationFrameId = requestAnimationFrame(drawFrame);
 }
 
 
 function stopCamera() {
+    // --- LOGNING: Sæt status til 'Idle' ved manuelt stop ---
+    const wasStreaming = appStatus === 'Streaming'; 
+    appStatus = 'Idle';
+    if (wasStreaming) { 
+        logAppState("Stream stoppet manuelt"); 
+    }
+    
     if (stream) {
         stream.getTracks().forEach(t => t.stop());
         stream = null;
     }
     if (ws) {
-        ws.close();
+        ws.close(); 
         ws = null;
     }
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
     }
-    mediaRecorder = null;
-    // Vigtigt: Stop requestAnimationFrame loopet
+    mediaRecorder = null; 
     cancelAnimationFrame(animationFrameId); 
     releaseWakeLock();
     statusText.textContent = "⚪ Streaming stoppet";
@@ -543,3 +624,76 @@ function releaseWakeLock() {
             });
     }
 }
+
+// --- Initialisering og Hændelseslyttere ---
+document.addEventListener("DOMContentLoaded", async () => {
+    loadConfig();
+    await populateCameraList();
+    await getAppVersionFromManifest(); 
+    updateButtonStates();
+    updateOverlayInfo(); 
+
+    startButton.addEventListener("click", startCamera);
+    stopButton.addEventListener("click", stopCamera);
+    zoomInButton.addEventListener("click", () => adjustZoom(ZOOM_STEP));
+    zoomOutButton.addEventListener("click", () => adjustZoom(-ZOOM_STEP));
+    resetZoomButton.addEventListener("click", () => setZoomLevel(1.0));
+
+    resolutionSelect.addEventListener("change", () => {
+        saveConfig();
+        if (stream) {
+            stopCamera();
+            startCamera();
+        }
+    });
+    fpsSelect.addEventListener("change", () => {
+        saveConfig();
+        if (stream) {
+            stopCamera();
+            startCamera();
+        }
+    });
+
+    // --- LOGNING: Initialisering af batteriovervågning og første log entry ---
+    loadAppLogs(); 
+
+    if ('getBattery' in navigator) {
+        try {
+            batteryManager = await navigator.getBattery();
+            console.log("Logning: Battery Status API er tilgængelig.");
+
+            await logAppState("App start (initial log)"); 
+
+            batteryManager.addEventListener('levelchange', async () => {
+                await logAppState("Batteriniveau ændret");
+            });
+
+            batteryManager.addEventListener('chargingchange', async () => {
+                await logAppState("Ladestatus ændret");
+            });
+
+        } catch (e) {
+            console.warn("Logning: Fejl ved adgang til Battery Status API:", e);
+            batteryManager = null; 
+        }
+    } else {
+        console.warn("Logning: Battery Status API understøttes ikke af denne browser.");
+    }
+
+    // --- Opsæt event listeners for de nye knapper ---
+    const downloadLogsButton = document.getElementById('downloadLogsButton');
+    if (downloadLogsButton) {
+        downloadLogsButton.addEventListener('click', downloadAppLogs);
+    }
+
+    const clearLogsButton = document.getElementById('clearLogsButton');
+    if (clearLogsButton) {
+        clearLogsButton.addEventListener('click', clearAppLogs);
+    }
+
+    // Få enhedsinformation (baseret på user agent, simpelt) - Beholdes
+    overlayData.device = navigator.userAgent.match(/\(([^)]+)\)/)?.[1] || "Ukendt Enhed";
+    if (overlayData.device.length > 25) { 
+        overlayData.device = overlayData.device.substring(0, 22) + "...";
+    }
+});
