@@ -34,11 +34,14 @@ const resetZoomButton = document.getElementById("resetZoom");
 const currentZoomDisplay = document.getElementById("currentZoomDisplay");
 // Ny DOM element for skærmkontrol
 const toggleScreenLockButton = document.getElementById("toggleScreenLockButton");
+// Nye DOM elementer for de individuelle ikoner inde i skærmlås knappen
+const screenOnIcon = toggleScreenLockButton ? toggleScreenLockButton.querySelector('.fa-tv') : null;
+const screenOffIcon = toggleScreenLockButton ? toggleScreenLockButton.querySelector('.fa-power-off') : null;
 
 
 // Globale variabler
 let stream = null; // Stream fra kameraet
-let ws = null;     // WebSocket forbindelse
+let ws = null;    // WebSocket forbindelse
 let mediaRecorder = null; // MediaRecorder instance
 let wakeLock = null; // Skærmlås (actual wake lock object)
 let currentZoomLevel = 1.0; // Aktuel zoomniveau
@@ -122,7 +125,7 @@ function updateOverlayInfo() {
     const selectedRes = getResolutionSettings();
     overlayData.resolution = `${selectedRes.width}x${selectedRes.height}`;
     overlayData.fps = `${fpsSelect.value} FPS`;
-    currentZoomDisplay.textContent = `Zoom: x${currentZoomLevel.toFixed(1)}`;
+    currentZoomDisplay.textContent = `x${currentZoomLevel.toFixed(1)}`;
 }
 
 function getResolutionSettings() {
@@ -300,13 +303,13 @@ async function requestWakeLock() {
         try {
             wakeLock = await navigator.wakeLock.request('screen');
             console.log('Screen Wake Lock er aktiv!');
-            updateScreenLockButtonText(); // Opdater knaptekst til "Skærm: Tændt"
+            updateScreenLockButtonIcons(); // Opdater knap til ikoner
         } catch (err) {
             console.error('Kunne ikke aktivere Screen Wake Lock:', err);
             // Hvis anmodning mislykkes (f.eks. bruger nægter), opdater præference til at afspejle dette
             userPrefersScreenAlwaysOn = false; // Antag brugeren ikke ønsker den tændt, hvis den fejler
             saveConfig();
-            updateScreenLockButtonText(); // Opdater knap til "Skærm: Slukket (Fejl)"
+            updateScreenLockButtonIcons(); // Opdater knap til at vise "slukket" ikoner og evt. fejl
             alert('FEJL: Kunne ikke holde skærmen tændt. Browseren/enheden tillader det muligvis ikke eller brugeren nægtede.');
         }
     } else if (!userPrefersScreenAlwaysOn) {
@@ -317,7 +320,7 @@ async function requestWakeLock() {
         console.warn('Wake Lock API understøttes ikke i denne browser.');
         userPrefersScreenAlwaysOn = false; // Kan ikke holde skærmen tændt, hvis API ikke understøttes
         saveConfig();
-        updateScreenLockButtonText(); // Opdater knap til "Skærm: Slukket (Ikke understøttet)"
+        updateScreenLockButtonIcons(); // Opdater knap til "Slukket (Ikke understøttet)"
     }
 }
 
@@ -330,7 +333,7 @@ function releaseWakeLock() {
                 // Opdater knapteksten, hvis brugerpræferencen er "Slukket"
                 // Ellers forbliver den "Tændt", og Wake Lock anmodes ved næste stream start
                 if (!userPrefersScreenAlwaysOn) { 
-                   updateScreenLockButtonText(); // Sørg for den står som "Skærm: Slukket"
+                   updateScreenLockButtonIcons(); // Sørg for den står som "Skærm: Slukket"
                 }
             })
             .catch((err) => {
@@ -344,7 +347,7 @@ function handleScreenToggleButton() {
     userPrefersScreenAlwaysOn = !userPrefersScreenAlwaysOn; // Toggle præferencen
     saveConfig(); // Gem den nye præference
 
-    updateScreenLockButtonText(); // Opdater knaptekst øjeblikkeligt
+    updateScreenLockButtonIcons(); // Opdater knap ikoner øjeblikkeligt
 
     // Hvis streaming er aktiv, anvend den nye wake lock præference med det samme
     if (appStatus === 'Streaming') {
@@ -357,19 +360,28 @@ function handleScreenToggleButton() {
     // Hvis ikke streaming, vil præferencen blive anvendt næste gang streaming starter
 }
 
-// Helper til at opdatere knapteksten baseret på brugerpræference
-function updateScreenLockButtonText() {
-    if (toggleScreenLockButton) {
-        let buttonText = userPrefersScreenAlwaysOn ? "Skærm: Tændt" : "Skærm: Slukket";
-        // Tilføj yderligere info, hvis Wake Lock ikke understøttes eller der var en fejl
+// Helper til at opdatere knapikonerne baseret på brugerpræference og Wake Lock status
+function updateScreenLockButtonIcons() {
+    if (screenOnIcon && screenOffIcon && toggleScreenLockButton) {
         if (!('wakeLock' in navigator)) {
-            buttonText = "Skærm: Slukket (Ikke understøttet)";
-        } else if (!userPrefersScreenAlwaysOn && wakeLock === null && appStatus === 'Streaming') {
-             // Hvis brugeren valgte slukket, men Wake Lock stadig er aktiv fra tidligere anmodning,
-             // eller hvis der var en fejl. Dette er en kompleks edge case.
-             // Simplicitet: hvis den er slukket og vi ikke er i stand til at holde den tændt.
+            // Wake Lock ikke understøttet, vis kun slukket ikon (eller ingen, hvis det er designet sådan)
+            screenOnIcon.style.display = 'none';
+            screenOffIcon.style.display = 'inline-block';
+            toggleScreenLockButton.title = "Skærmlås ikke understøttet"; // Tilføj tooltip
+            toggleScreenLockButton.disabled = true; // Deaktiver knappen, da den ikke virker
+        } else if (userPrefersScreenAlwaysOn) {
+            // Bruger ønsker skærmen tændt
+            screenOnIcon.style.display = 'inline-block';
+            screenOffIcon.style.display = 'none';
+            toggleScreenLockButton.title = "Skærm holdes tændt (klik for at slukke)";
+            toggleScreenLockButton.disabled = false;
+        } else {
+            // Bruger ønsker skærmen slukket (Wake Lock frigivet)
+            screenOnIcon.style.display = 'none';
+            screenOffIcon.style.display = 'inline-block';
+            toggleScreenLockButton.title = "Skærm kan slukke (klik for at holde tændt)";
+            toggleScreenLockButton.disabled = false;
         }
-        toggleScreenLockButton.textContent = buttonText;
     }
 }
 
@@ -687,8 +699,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateButtonStates();
     updateOverlayInfo(); 
 
-    // Sæt initial knaptekst for skærmlås
-    updateScreenLockButtonText(); 
+    // Sæt initial knapikoner for skærmlås
+    updateScreenLockButtonIcons(); 
 
     // Opsæt event listeners
     startButton.addEventListener("click", startCamera);

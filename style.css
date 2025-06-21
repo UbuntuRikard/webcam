@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.org/licenses/>.
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
 :root {
@@ -28,19 +28,26 @@ along with this program. If not, see <https://www.org/licenses/>.
     --status-streaming: #28a745; /* Green */
     --status-error: #dc3545; /* Red */
     --status-stopped: #6c757d; /* Grey */
+
+    /* Nye farver for gennemsigtige elementer */
+    --transparent-primary: rgba(0, 123, 255, 0.5);
+    --transparent-secondary: rgba(108, 117, 125, 0.5);
+    --transparent-white-bg: rgba(255, 255, 255, 0.2);
+    --transparent-dark-bg: rgba(0, 0, 0, 0.6);
+    --transparent-disabled: rgba(204, 204, 204, 0.4);
 }
 
 body {
+    margin: 0;
+    background: black; /* Hele baggrunden sort for at matche video */
+    color: white; /* Standard tekstfarve for body */
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     display: flex;
     justify-content: center;
     align-items: center; /* Centrer hele indholdet vertikalt */
-    min-height: 100vh;
-    background-color: var(--bg-color);
-    margin: 0;
+    min-height: 100vh; /* Fyld hele skærmhøjden */
     padding: 0;
     box-sizing: border-box;
-    color: var(--text-color);
     overflow-y: auto; /* Tillad scroll på body hvis indholdet fylder mere */
 }
 
@@ -49,118 +56,144 @@ body {
     flex-direction: column;
     align-items: center;
     width: 100%;
-    max-width: 500px; /* Standard bredde, justeres i media queries */
-    padding: 10px;
+    max-width: 500px; /* Standard bredde for appen */
+    height: 100vh; /* Fyld viewport-højden for at sikre video fylder */
+    padding: 0; /* Fjern padding fra wrapper, da indholdet skal ud til kanterne */
     box-sizing: border-box;
-    background-color: var(--card-bg-color);
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: transparent; /* Wrapper skal være gennemsigtig */
+    box-shadow: none; /* Fjern skygge */
+    border-radius: 0; /* Fjern border-radius */
     margin-top: 0;
 }
 
-/* Ny stil for status-teksten inde i canvas */
-.overlay-status {
-    position: absolute;
-    top: 5%; /* Start ved 5% fra toppen af visual-area */
-    left: 50%;
-    transform: translateX(-50%);
-    color: white; /* Teksten skal være synlig på sort baggrund */
-    background-color: rgba(0, 0, 0, 0.4); /* Let baggrund for læsbarhed */
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 0.9em;
-    white-space: nowrap; /* Forhindrer ombrydning */
-    z-index: 15; /* Sørg for, at den er over canvas og under controls */
-}
-
-/* Specific status colors from webcam.js logs */
-.overlay-status[data-status="starting"] { color: var(--status-starting); background-color: rgba(0, 0, 0, 0.6); }
-.overlay-status[data-status="streaming"] { color: var(--status-streaming); background-color: rgba(0, 0, 0, 0.6); }
-.overlay-status[data-status="error"] { color: var(--status-error); background-color: rgba(0, 0, 0, 0.6); }
-.overlay-status[data-status="stopped"] { color: var(--status-stopped); background-color: rgba(0, 0, 0, 0.6); }
-
-
 #video {
-    display: none;
+    display: none; /* Video-elementet er skjult, da vi tegner på canvas */
 }
 
 .visual-area {
     position: relative;
     width: 100%;
-    /* Standard aspektforhold, justeres i media queries */
-    padding-bottom: 75%; /* 4:3 aspektforhold for video, juster hvis kamera er 16:9 */
+    /* Standard aspektforhold (4:3), men dette justeres dynamisk af JS til video-stream */
+    flex-grow: 1; /* Lad videoområdet fylde mest muligt */
     background-color: black;
     overflow: hidden;
-    border-radius: 4px;
+    border-radius: 0; /* Ingen afrundede hjørner på videoområdet */
+    display: flex; /* Gør det til en flex-container for overlay-elementer */
+    justify-content: center; /* Centrer canvas horisontalt */
+    align-items: center; /* Centrer canvas vertikalt */
 }
 
 #canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
+    display: block;
     width: 100%;
     height: 100%;
-    display: block;
-    border: none; /* Fjern ramme */
+    border: none;
     background-color: black;
     object-fit: contain; /* Sikrer, at videoen passer inden for canvas uden at blive beskåret */
+    z-index: 1; /* Under overlay-elementer */
 }
 
-.overlay-controls {
+/* Status-tekst inde i canvas */
+.overlay-status {
     position: absolute;
+    top: 5px; /* Tæt på toppen, som i eksemplet */
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    background-color: var(--transparent-dark-bg); /* Mørk, semi-transparent baggrund */
+    padding: 3px 8px; /* Mindre padding */
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.8em; /* Mindre skriftstørrelse */
+    white-space: nowrap;
+    z-index: 15;
+    backdrop-filter: blur(2px);
+}
+
+/* Specific status colors from webcam.js logs */
+.overlay-status[data-status="starting"] { color: var(--status-starting); background-color: rgba(0, 0, 0, 0.7); }
+.overlay-status[data-status="streaming"] { color: var(--status-streaming); background-color: rgba(0, 0, 0, 0.7); }
+.overlay-status[data-status="error"] { color: var(--status-error); background-color: rgba(0, 0, 0, 0.7); }
+.overlay-status[data-status="stopped"] { color: var(--status-stopped); background-color: rgba(0, 0, 0, 0.7); }
+
+/* --- Kontrolpanel i bunden --- */
+.overlay-controls {
+    position: absolute; /* Relative til visual-area */
     bottom: 0;
     left: 0;
     width: 100%;
     display: flex;
     flex-direction: column; /* Stabler kontrolrækker vertikalt */
-    gap: 5px; /* Mellemrum mellem rækker */
-    padding: 8px; /* Lidt padding indeni knapområdet */
+    gap: 5px;
+    padding: 5px; /* Mindre padding for det samlede panel */
     box-sizing: border-box;
-    background: rgba(0, 0, 0, 0.5); /* Semi-transparent baggrund for HELE overlayet */
+    background: var(--transparent-dark-bg); /* Gennemsigtig baggrund for HELE overlayet */
     color: white;
-    z-index: 10;
+    z-index: 20; /* Sørg for at kontrollerne er øverst */
+    backdrop-filter: blur(3px); /* Mere blur på det samlede panel */
 }
 
-/* --- Generelle styles for knapper og inputfelter inden for overlay --- */
 .control-row {
     display: flex;
     flex-wrap: wrap; /* Tillad wrap */
-    justify-content: center; /* Centrerer elementer */
-    gap: 5px; /* Mellemrum mellem elementer i rækker */
-    width: 100%; /* Sørg for at rækken fylder bredden */
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
 }
 
+/* --- Stil for knapper og inputfelter --- */
 .action-button,
-.control-row input,
-.control-row select {
-    padding: 4px 6px;
+.compact-input,
+.compact-select {
+    padding: 3px 6px; /* Kompakt padding for alle kontroller */
     border-radius: 4px;
-    font-size: 0.75em;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    font-size: 0.75em; /* Standard font-size for alle kontroller */
+    border: 1px solid rgba(255, 255, 255, 0.1); /* Let hvid kant */
     box-sizing: border-box;
-    /* Gør inputs/selects let gennemsigtige og brug hvid tekst */
-    background-color: rgba(255, 255, 255, 0.2); /* Let gennemsigtig hvid */
-    color: white; /* Hvid tekst */
-    backdrop-filter: blur(2px); /* Tilføjer en let blur effekt bag elementerne for bedre læsbarhed */
+    color: white; /* Hvid tekstfarve */
+    backdrop-filter: blur(2px); /* Let blur for individuelle elementer */
 }
 
+/* Stil for inputs og selects specifikt */
+.compact-input,
+.compact-select {
+    background-color: var(--transparent-white-bg); /* Let gennemsigtig hvid baggrund */
+    color: white; /* Sørg for tekst er hvid */
+}
+
+.compact-select option {
+    background-color: rgba(0, 0, 0, 0.8); /* Mørk baggrund for dropdown-valg */
+    color: white;
+}
+
+/* Placeholder farve */
+.compact-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.compact-input:focus,
+.compact-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* Stil for action knapper */
 .action-button {
-    font-size: 0.8em;
-    /* Gør knapperne gennemsigtige */
-    background-color: rgba(0, 123, 255, 0.5); /* Primary color med 50% gennemsigtighed */
-    color: white; /* Sørg for at teksten er hvid */
+    background-color: var(--transparent-primary); /* Primary color med 50% gennemsigtighed */
     border: none;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
     white-space: nowrap;
-    flex: 1 1 auto;
+    flex: 1 1 auto; /* Tillader knapper at flexe */
     min-width: 0;
-    backdrop-filter: blur(2px); /* Tilføjer en let blur effekt */
+    display: flex; /* For ikoner og tekst */
+    align-items: center;
+    justify-content: center;
+    gap: 4px; /* Mellemrum mellem ikon og tekst */
 }
 
 .action-button.secondary {
-    background-color: rgba(108, 117, 125, 0.5); /* Secondary color med 50% gennemsigtighed */
+    background-color: var(--transparent-secondary); /* Secondary color med 50% gennemsigtighed */
 }
 
 .action-button:hover:not(:disabled) {
@@ -172,96 +205,143 @@ body {
     background-color: rgba(108, 117, 125, 0.7);
 }
 
-
 .action-button:active:not(:disabled) {
     transform: translateY(0);
 }
 
 .action-button:disabled {
-    background-color: rgba(204, 204, 204, 0.4) !important; /* Grå og gennemsigtig for disabled */
+    background-color: var(--transparent-disabled) !important;
     cursor: not-allowed;
-    opacity: 0.8; /* Behold lidt opacity for disabled state */
+    opacity: 0.8;
 }
 
-/* Specifikke justeringer for top-action-row (Zoom, Start/Stop) */
-.top-action-row {
+/* For action-buttons, der kun har ikon (uden tekst) */
+.action-button.icon-only {
+    width: 26px; /* Fast bredde for knapperne */
+    height: 26px; /* Fast højde for knapperne */
+    padding: 0;
+    font-size: 1em; /* Større ikon for disse */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* Ensure they don't shrink */
+}
+
+/* Specific styling for the dual-icon button (Screen Off) */
+.action-button.icon-only i:first-child {
+    margin-right: -0.2em; /* Overlap icons slightly */
+    position: relative;
+    z-index: 1;
+}
+.action-button.icon-only i:last-child {
+    margin-left: -0.2em; /* Overlap icons slightly */
+}
+
+
+/* --- Specifikke layoutjusteringer for rækker --- */
+
+/* New top row for Camera, Resolution, FPS, Start, Stop, Screen Off */
+.top-row-controls {
     justify-content: space-between;
-    flex-wrap: nowrap;
+    align-items: center;
+}
+
+.top-row-controls .compact-select {
+    flex: 1 1 auto; /* Allow them to flex */
+    max-width: calc(100% / 6 - 5px); /* Divide equally among 6 elements with gaps */
+}
+
+.top-row-controls .action-button.icon-only {
+    flex: 0 0 26px; /* Fixed size for icon-only buttons */
+}
+
+
+/* New bottom row for IP, Port, Log, Clear */
+.bottom-row-controls {
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bottom-row-controls .compact-input {
+    flex: 1 1 auto;
+    max-width: calc(100% / 4 - 5px); /* Divide equally among 4 elements with gaps */
+}
+
+.bottom-row-controls .port-input-small {
+    flex: 0 1 calc(100% / 4 - 5px);
+}
+
+.bottom-row-controls .action-button.icon-only {
+    flex: 0 0 26px; /* Fixed size for icon-only buttons */
+}
+
+
+/* IP and Port inputs - original compact-input styles now apply to the new structure */
+.compact-input {
+    flex: 1 1 auto; /* Let them flex */
+    max-width: 150px; /* Max bredde for at forhindre at de bliver for brede */
+}
+.compact-input.port-input-small {
+    max-width: 80px; /* Mindre bredde for port */
+}
+
+
+/* --- Zoom knapper i venstre side --- */
+.controls-left {
+    position: absolute;
+    top: 50%; /* Juster vertikalt */
+    transform: translateY(-50%); /* Centrer vertikalt */
+    left: 5px; /* Lidt fra venstre kant */
+    display: flex;
+    flex-direction: column; /* Stabler knapper vertikalt */
+    gap: 5px; /* Mellemrum mellem knapper */
+    z-index: 10;
 }
 
 .zoom-button {
-    flex: 0 0 auto;
-    width: 26px;
-    height: 26px;
-    padding: 0;
+    width: 30px; /* Bredde på zoom knapper */
+    height: 30px; /* Højde på zoom knapper */
+    border-radius: 50%; /* Runde knapper */
+    background-color: var(--transparent-primary); /* Gennemsigtig primær farve */
+    color: white;
+    border: none;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.1em;
+    font-size: 1.2em; /* Større ikoner for +/- */
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    backdrop-filter: blur(2px);
+}
+
+.zoom-button:hover {
+    background-color: rgba(0, 123, 255, 0.7);
+    transform: scale(1.05); /* Let zoom ved hover */
+}
+
+.zoom-button:active {
+    transform: scale(0.95);
+}
+
+.zoom-button.reset-zoom-button {
+    font-size: 1em; /* Adjust font size for icon */
+    border-radius: 4px; /* Not round, but rounded square */
+    width: 26px; /* Use the same fixed size for icon-only buttons */
+    height: 26px;
+    padding: 0; /* No padding needed as it's icon only */
 }
 
 .zoom-display {
     padding: 4px;
-    /* Skal være gennemsigtig */
-    background-color: rgba(255, 255, 255, 0.2); /* Gennemsigtig baggrund */
-    color: white; /* Hvid tekst for læsbarhed */
+    background-color: var(--transparent-white-bg); /* Gennemsigtig baggrund */
+    color: white;
     font-weight: bold;
     font-size: 0.8em;
-    flex: 1 1 auto;
     text-align: center;
     white-space: nowrap;
-    min-width: 45px;
-    backdrop-filter: blur(2px); /* Tilføjer let blur */
-}
-
-/* Justeringer for inline-settings (Kamera, Opløsning, FPS) */
-.inline-settings {
-    justify-content: space-between;
-    align-items: center;
-}
-
-.inline-settings #cameraSelect.small-select {
-    flex: 2 1 calc(50% - 5px);
-    max-width: calc(50% - 5px);
-}
-.inline-settings #resolutionSelect.small-select {
-    flex: 1 1 calc(25% - 5px);
-    max-width: calc(25% - 5px);
-}
-.inline-settings #fpsSelect.small-select {
-    flex: 1 1 calc(25% - 5px);
-    max-width: calc(25% - 5px);
-}
-
-
-/* Justeringer for bottom-settings (IP, Port, Skærmlås) - Lignende logik som ovenfor */
-.bottom-settings {
-    justify-content: space-between;
-    align-items: center;
-}
-
-.bottom-settings .ip-input {
-    flex: 2 1 calc(50% - 5px);
-    max-width: calc(50% - 5px);
-}
-
-.bottom-settings .port-input {
-    flex: 1 1 calc(25% - 5px);
-    max-width: calc(25% - 5px);
-}
-
-.bottom-settings .screen-lock-button {
-    flex: 1 1 calc(25% - 5px);
-    max-width: calc(25% - 5px);
-    font-size: 0.75em;
-}
-
-/* Log knapper nederst */
-.log-buttons {
-    justify-content: space-around;
-}
-.log-buttons .action-button {
-    flex: 1 1 calc(50% - 5px);
+    min-width: 40px; /* Minimum bredde */
+    border-radius: 4px;
+    backdrop-filter: blur(2px);
 }
 
 /* Accessibility: Hide labels visually but keep for screen readers */
@@ -278,198 +358,145 @@ body {
 }
 
 
-/* --- Responsive Adjustments --- */
-
-/* Generelle justeringer for smartphones i portræt */
-@media (orientation: portrait) and (max-width: 480px) {
+/* --- Responsive Adjustments (Desktop / Tablet) --- */
+@media screen and (min-width: 600px) {
     .main-wrapper {
-        padding: 5px;
-        border-radius: 0;
-        box-shadow: none;
-        max-width: 100%;
-    }
-
-    .overlay-status {
-        top: 5%;
-        font-size: 0.8em;
-    }
-
-    .visual-area {
-        width: 120%;
-        margin-left: -10%;
-        margin-right: -10%;
-        padding-bottom: 90%;
+        max-width: 700px; /* Lidt bredere på større skærme */
+        height: 90vh; /* Mindre end 100vh for at give plads rundt om */
     }
 
     .overlay-controls {
-        padding: 4px;
-        gap: 2px;
+        flex-direction: column; /* Keep control rows stacked */
+        justify-content: flex-end; /* Align to the bottom */
+        padding: 8px 15px; /* Mere padding */
+        gap: 10px; /* Større mellemrum mellem hovedsektioner */
     }
 
     .control-row {
-        flex-direction: column;
-        gap: 2px;
-        justify-content: flex-start;
+        gap: 8px; /* Større mellemrum mellem elementer i rækken */
     }
 
-    .action-button,
-    .control-row input,
-    .control-row select,
-    .zoom-display {
-        width: 100%;
-        font-size: 0.8em;
-        padding: 6px;
+    /* Adjust widths again for desktop / tablet */
+    .top-row-controls .compact-select {
+        max-width: calc(100% / 6 - 8px); /* Adjusted for new gap */
+    }
+    .top-row-controls .action-button.icon-only {
+        flex: 0 0 30px; /* Slightly larger fixed size for icon-only buttons on desktop */
+        height: 30px;
     }
 
-    .top-action-row {
-        flex-direction: row;
-        justify-content: space-between;
-        flex-wrap: wrap;
+    .bottom-row-controls .compact-input {
+        max-width: calc(100% / 4 - 8px);
     }
-    .top-action-row .action-button,
-    .top-action-row .zoom-display {
-        flex: 1 1 auto;
-        width: auto;
+    .bottom-row-controls .port-input-small {
+        max-width: calc(100% / 4 - 8px);
     }
+    .bottom-row-controls .action-button.icon-only {
+        flex: 0 0 30px; /* Slightly larger fixed size for icon-only buttons on desktop */
+        height: 30px;
+    }
+
+
+    .controls-left {
+        left: 15px; /* Flyt lidt længere ind */
+        top: 50%;
+        transform: translateY(-50%);
+        gap: 8px;
+    }
+
     .zoom-button {
-        width: 35px;
+        width: 35px; /* Lidt større zoom knapper */
         height: 35px;
-        font-size: 1.1em;
+    }
+    .zoom-button.reset-zoom-button {
+        width: 30px; /* Match icon-only button size */
+        height: 30px;
     }
     .zoom-display {
-        flex-grow: 1;
-        font-size: 0.8em;
-    }
-    #resetZoom, #startButton, #stopButton {
-        flex-grow: 1;
-        flex-basis: auto;
-    }
-
-    /* Justeringer for inline-settings og bottom-settings i portræt */
-    .inline-settings,
-    .bottom-settings,
-    .log-buttons {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .inline-settings #cameraSelect.small-select,
-    .inline-settings #resolutionSelect.small-select,
-    .inline-settings #fpsSelect.small-select,
-    .bottom-settings .ip-input,
-    .bottom-settings .port-input,
-    .bottom-settings .screen-lock-button,
-    .log-buttons .action-button {
-        flex: 1 1 100%;
-        max-width: 100%;
+        font-size: 0.9em;
+        min-width: 45px;
     }
 }
 
-/* Justeringer for smartphones i landskab */
-@media (orientation: landscape) and (max-width: 900px) {
-    body {
-        padding: 5px;
-    }
-    .main-wrapper {
-        flex-direction: row;
-        justify-content: space-around;
-        align-items: flex-start;
-        max-width: 95%;
-        height: auto;
-        padding: 10px;
-    }
 
-    .overlay-status {
-        position: absolute;
-        top: 5%;
-        left: 50%;
-        transform: translateX(-50%);
-        font-size: 0.8em;
-        margin: 0;
-        z-index: 15;
+/* --- Responsive Adjustments (Smartphone Portrait) --- */
+@media (orientation: portrait) and (max-width: 480px) {
+    .main-wrapper {
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
+        max-width: 100%; /* Fyld hele bredden */
+        height: 100vh; /* Fyld hele højden */
     }
 
     .visual-area {
-        width: 60%;
-        padding-bottom: 45%;
-        min-height: 200px;
-        margin-right: 10px;
-        order: 1;
+        /* Fjern fast padding-bottom for at lade flex-grow styre højden */
+        padding-bottom: 0;
+    }
+
+    .overlay-status {
+        top: 5px;
+        font-size: 0.75em;
+        padding: 2px 5px;
     }
 
     .overlay-controls {
-        position: static;
-        background: none; /* Fjern baggrund, da knapperne selv er gennemsigtige */
-        width: auto;
-        padding: 0;
-        gap: 6px;
-        flex-direction: column;
-        align-items: stretch;
-        flex-grow: 1;
-        order: 2;
-        max-height: 100%;
-        overflow-y: auto;
+        padding: 3px;
+        gap: 3px;
     }
 
-    .overlay-controls .control-row {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: flex-start;
-        gap: 4px;
+    .control-row {
+        gap: 3px;
+        flex-wrap: wrap; /* Tillad ombrydning for alle rækker */
     }
 
     .action-button,
-    .control-row input,
-    .control-row select,
-    .zoom-display {
-        font-size: 0.75em;
-        padding: 3px 5px;
+    .compact-input,
+    .compact-select {
+        font-size: 0.7em; /* Endnu mindre font på små skærme */
+        padding: 2px 4px; /* Endnu mindre padding */
+        height: auto; /* Lad højden bestemmes af indhold og padding */
     }
 
-    /* Justeringer for specifikke rækker i landskab */
-    .top-action-row {
-        justify-content: flex-start;
-        gap: 6px;
+    /* Justeringer for knapbredder på små skærme */
+    .top-row-controls .compact-select {
+        max-width: calc(100% / 6 - 3px); /* Adjusted for smaller gap */
     }
-    .top-action-row .action-button,
-    .top-action-row .zoom-display {
-        flex: 0 0 auto;
-        width: auto;
+    .top-row-controls .action-button.icon-only {
+        flex: 0 0 22px; /* Smaller fixed size for icon-only buttons on mobile */
+        height: 22px;
     }
+
+    .bottom-row-controls .compact-input {
+        max-width: calc(100% / 4 - 3px);
+    }
+    .bottom-row-controls .port-input-small {
+        max-width: calc(100% / 4 - 3px);
+    }
+    .bottom-row-controls .action-button.icon-only {
+        flex: 0 0 22px; /* Smaller fixed size for icon-only buttons on mobile */
+        height: 22px;
+    }
+
+
+    .controls-left {
+        left: 3px; /* Tættere på kanten */
+        top: 50%;
+        transform: translateY(-50%);
+        gap: 3px;
+    }
+
     .zoom-button {
-        width: 30px;
-        height: 30px;
+        width: 25px; /* Endnu mindre zoom knapper */
+        height: 25px;
         font-size: 1em;
     }
-
-    /* SPECIFIKKE JUSTERINGER FOR LANDSKAB - inline-settings (Kamera, Opløsning, FPS) */
-    .inline-settings #cameraSelect.small-select {
-        flex: 2 1 calc(50% - 4px);
-        max-width: calc(50% - 4px);
+    .zoom-button.reset-zoom-button {
+        width: 22px; /* Match icon-only button size */
+        height: 22px;
     }
-    .inline-settings #resolutionSelect.small-select {
-        flex: 1 1 calc(25% - 4px);
-        max-width: calc(25% - 4px);
-    }
-    .inline-settings #fpsSelect.small-select {
-        flex: 1 1 calc(25% - 4px);
-        max-width: calc(25% - 4px);
-    }
-
-    /* SPECIFIKKE JUSTERINGER FOR LANDSKAB - bottom-settings (IP, Port, Skærmlås) */
-    .bottom-settings .ip-input {
-        flex: 2 1 calc(50% - 4px);
-        max-width: calc(50% - 4px);
-    }
-    .bottom-settings .port-input {
-        flex: 1 1 calc(25% - 4px);
-        max-width: calc(25% - 4px);
-    }
-    .bottom-settings .screen-lock-button {
-        flex: 1 1 calc(25% - 4px);
-        max-width: calc(25% - 4px);
-    }
-
-    .log-buttons {
-        flex-wrap: wrap;
+    .zoom-display {
+        font-size: 0.7em;
+        min-width: 35px;
     }
 }

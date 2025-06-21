@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Webcam Streamer</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000"/>
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -19,29 +20,31 @@
 
         <div class="visual-area">
             <canvas id="canvas"></canvas>
-            <p id="status" class="overlay-status">Status: Klar</p> <div class="controls overlay-controls">
-                <div class="control-row top-action-row">
-                    <button id="zoomOut" class="action-button zoom-button">-</button>
-                    <span id="currentZoomDisplay" class="zoom-display">x1.0</span>
-                    <button id="zoomIn" class="action-button zoom-button">+</button>
-                    <button id="resetZoom" class="action-button">0 Z</button>
-                    <button id="startButton" class="action-button primary">▶</button>
-                    <button id="stopButton" class="action-button secondary" disabled>◼</button>
-                </div>
+            <p id="status" class="overlay-status" data-status="ready">Status: Klar</p> 
 
-                <div class="control-row inline-settings">
+            <div class="controls-left">
+                <button id="zoomIn" class="zoom-button"><i class="fas fa-plus"></i></button>
+                <span id="currentZoomDisplay" class="zoom-display">x1.0</span>
+                <button id="zoomOut" class="zoom-button"><i class="fas fa-minus"></i></button>
+                <button id="resetZoom" class="zoom-button reset-zoom-button icon-only">
+                    <i class="fas fa-redo"></i>
+                </button>
+            </div>
+
+            <div class="controls overlay-controls">
+                <div class="control-row top-row-controls">
                     <label for="cameraSelect" class="sr-only">Vælg Kamera:</label>
-                    <select id="cameraSelect" class="small-select"></select>
+                    <select id="cameraSelect" class="compact-select"></select>
 
                     <label for="resolutionSelect" class="sr-only">Opløsning:</label>
-                    <select id="resolutionSelect" class="small-select">
-                        <option value="vga">VGA</option>
-                        <option value="hd">HD</option>
-                        <option value="fhd">FHD</option>
+                    <select id="resolutionSelect" class="compact-select">
+                        <option value="vga">640x480</option>
+                        <option value="hd">1280x720</option>
+                        <option value="fhd">1920x1080</option>
                     </select>
 
                     <label for="fpsSelect" class="sr-only">FPS:</label>
-                    <select id="fpsSelect" class="small-select">
+                    <select id="fpsSelect" class="compact-select">
                         <option value="5">5</option>
                         <option value="10" selected>10</option>
                         <option value="15">15</option>
@@ -49,23 +52,32 @@
                         <option value="25">25</option>
                         <option value="30">30</option>
                     </select>
+                    
+                    <button id="startButton" class="action-button primary icon-only">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button id="stopButton" class="action-button secondary icon-only" disabled>
+                        <i class="fas fa-stop"></i>
+                    </button>
+                    <button id="toggleScreenLockButton" class="action-button icon-only">
+                        <i class="fas fa-tv"></i><i class="fas fa-power-off"></i>
+                    </button>
                 </div>
 
-                <div class="control-row bottom-settings">
+                <div class="control-row bottom-row-controls">
                     <label for="ipInput" class="sr-only">Server IP:</label>
-                    <input type="text" id="ipInput" value="192.168.1.100" placeholder="f.eks. 192.168.1.100" class="ip-input">
+                    <input type="text" id="ipInput" value="192.168.1.100" placeholder="f.eks. 192.168.1.100" class="compact-input">
 
                     <label for="portInput" class="sr-only">Port:</label>
-                    <input type="number" id="portInput" value="8181" placeholder="f.eks. 8181" class="port-input">
+                    <input type="number" id="portInput" value="8181" placeholder="f.eks. 8181" class="compact-input port-input-small">
 
-                    <button id="toggleScreenLockButton" class="action-button primary screen-lock-button">Skærm: Tændt</button>
+                    <button id="downloadLogsButton" class="action-button icon-only">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button id="clearLogsButton" class="action-button secondary icon-only">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
-
-                <div class="control-row log-buttons">
-                    <button id="downloadLogsButton" class="action-button primary">Download Log</button>
-                    <button id="clearLogsButton" class="action-button secondary">Ryd Logs</button>
-                </div>
-
             </div>
         </div>
     </div>
